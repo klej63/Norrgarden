@@ -1,156 +1,551 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sv">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Elkoll SE3</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Elkoll – energidashboard</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #fff;
+      --text: #172033;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --blue: #2563eb;
+      --green: #059669;
+    }
 
-<style>
+    * { box-sizing: border-box; }
 
-:root{
- --bg:#f5f7fa;
- --card:#ffffff;
- --border:#e5e7eb;
- --text:#1f2937;
- --blue:#2563eb;
- --green:#059669;
- --orange:#ea580c;
-}
+    body {
+      margin: 0;
+      padding: 22px;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.5 system-ui, sans-serif;
+    }
 
-*{
- box-sizing:border-box;
-}
+    main { max-width: 1050px; margin: auto; }
+    h1 { margin: 0; }
+    h2 { margin: 0 0 12px; font-size: 1.15rem; }
+    .muted, small { color: var(--muted); }
 
-body{
- margin:0;
- font-family:Segoe UI,Arial,sans-serif;
- background:var(--bg);
- color:var(--text);
-}
+    .toolbar, .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+    }
 
-.container{
- max-width:1400px;
- margin:auto;
- padding:20px;
-}
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin: 18px 0;
+    }
 
-h1{
- margin-top:0;
-}
+    button, .upload {
+      display: inline-block;
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      background: var(--blue);
+      color: white;
+      font: inherit;
+      cursor: pointer;
+    }
 
-.grid{
- display:grid;
- grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
- gap:16px;
-}
+    button.secondary { background: #e8eefc; color: #1e40af; }
+    button:disabled { opacity: .6; cursor: wait; }
+    input[type="file"] { display: none; }
 
-.card{
- background:var(--card);
- border-radius:12px;
- padding:20px;
- box-shadow:0 2px 8px rgba(0,0,0,.08);
- margin-bottom:16px;
-}
+    select {
+      padding: 9px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      font: inherit;
+    }
 
-.metric{
- font-size:2rem;
- font-weight:bold;
-}
+    #status { flex-basis: 100%; }
 
-.blue{color:var(--blue);}
-.green{color:var(--green);}
-.orange{color:var(--orange);}
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin: 14px 0;
+    }
 
-input[type=file]{
- width:100%;
- padding:10px;
-}
+    .metric { font-size: 1.8rem; font-weight: 700; }
+    .blue { color: var(--blue); }
+    .green { color: var(--green); }
 
-canvas{
- width:100%;
- max-width:100%;
-}
+    .charts {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+      gap: 14px;
+      margin: 14px 0;
+    }
 
-table{
- width:100%;
- border-collapse:collapse;
-}
+    canvas { display: block; width: 100%; height: 260px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
 
-th,td{
- padding:10px;
- border-bottom:1px solid var(--border);
-}
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+      white-space: nowrap;
+    }
 
-th{
- background:#f9fafb;
-}
+    th:first-child, td:first-child { text-align: left; }
+    th { color: var(--muted); font-weight: 600; }
 
-td:nth-child(2),
-td:nth-child(3){
- text-align:right;
-}
-
-.progress{
- background:#e5e7eb;
- border-radius:20px;
- overflow:hidden;
- height:24px;
-}
-
-.progress-bar{
- background:#059669;
- height:100%;
- width:0%;
- transition:0.5s;
-}
-
-.small{
- color:#6b7280;
- font-size:0.9rem;
-}
-
-</style>
+    @media (max-width: 700px) {
+      body { padding: 14px; }
+      .charts { grid-template-columns: 1fr; }
+      canvas { height: 230px; }
+    }
+  </style>
 </head>
-
 <body>
+<main>
+  <h1>⚡ Elkoll</h1>
+  <p class="muted">Importera månadsförbrukning, följ kostnader och exportera data.</p>
 
-<div class="container">
+  <section class="toolbar" aria-label="Datahantering">
+    <label class="upload" for="jsonFile">Importera JSON</label>
+    <input id="jsonFile" type="file" accept=".json,application/json">
 
-<h1>⚡ Elkoll SE3</h1>
+    <label for="yearSelect">År:</label>
+    <select id="yearSelect" aria-label="Välj år"></select>
 
-<div class="card">
+    <button id="exportBtn" class="secondary" type="button">Exportera CSV</button>
+    <button id="priceBtn" class="secondary" type="button">Hämta dagens SE3-pris</button>
 
-<h2>Importera förbrukningsfil</h2>
+    <div id="status" class="muted" role="status" aria-live="polite">
+      Importera en JSON-fil för att visa dina data.
+    </div>
+  </section>
 
-<input
- type="file"
- id="jsonFile"
- accept=".json">
+  <section class="grid" aria-label="Sammanfattning">
+    <article class="card">
+      <h2>Årsförbrukning</h2>
+      <div id="yearUsage" class="metric blue">—</div>
+      <div>kWh</div>
+    </article>
+    <article class="card">
+      <h2>Uppskattad årskostnad</h2>
+      <div id="yearCost" class="metric green">—</div>
+      <div>kr</div>
+    </article>
+    <article class="card">
+      <h2>Skillnad mot föregående år</h2>
+      <div id="savings" class="metric">—</div>
+      <div id="savingsNote" class="muted">Importera data för två år för jämförelse.</div>
+    </article>
+    <article class="card">
+      <h2>Dagens SE3-spotpris</h2>
+      <div id="spotPrice" class="metric blue">—</div>
+      <div id="spotNote" class="muted">kr/kWh, före eventuella påslag</div>
+    </article>
+  </section>
 
-<p id="status" class="small">
-Ingen fil importerad
-</p>
+  <section class="charts">
+    <article class="card">
+      <h2>Månadsförbrukning</h2>
+      <canvas id="usageChart" aria-label="Diagram över månadsförbrukning"></canvas>
+    </article>
+    <article class="card">
+      <h2>Kostnad per månad</h2>
+      <canvas id="costChart" aria-label="Cirkeldiagram över månadskostnader"></canvas>
+      <small>Fördelning av kostnaden för valt år.</small>
+    </article>
+  </section>
 
-</div>
+  <section class="card">
+    <h2>Månadsdata</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Månad</th>
+            <th>Förbrukning (kWh)</th>
+            <th>Kostnad (kr)</th>
+          </tr>
+        </thead>
+        <tbody id="dataRows"></tbody>
+      </table>
+    </div>
+    <p id="dataHint" class="muted"></p>
+  </section>
 
-<div class="grid">
+  <p class="muted">
+    Importerad data sparas bara i den här webbläsaren.
+    Kostnad utan ett importerat kostnadsvärde uppskattas med 2,27 kr/kWh.
+  </p>
+</main>
 
-<div class="card">
-<h3>Årsförbrukning</h3>
-<div id="annualUsage" class="metric blue">
-20 704
-</div>
-<div>kWh</div>
-</div>
+<script>
+(() => {
+  "use strict";
 
-<div class="card">
-<h3>Årskostnad</h3>
-<div id="annualCost" class="metric green">
-47 000
-</div>
-<div>kr</div>
-</div>
+  const STORAGE_KEY = "elkoll-monthly-data-v1";
+  const DEFAULT_RATE = 2.27;
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun",
+                  "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
+  const COLORS = ["#2563eb", "#059669", "#ea580c", "#7c3aed",
+                  "#0891b2", "#db2777", "#65a30d", "#d97706",
+                  "#4f46e5", "#0f766e", "#be123c", "#475569"];
 
-<div class="card">
-<h3>Verkligt pris</h3>
-<div class
+  const $ = id => document.getElementById(id);
+  const format = value =>
+    Number(value).toLocaleString("sv-SE", { maximumFractionDigits: 2 });
+
+  let records = loadSavedData();
+
+  function loadSavedData() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      return Array.isArray(saved) ? saved : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function normalizeData(input) {
+    const rows = Array.isArray(input)
+      ? input
+      : input && Array.isArray(input.data)
+        ? input.data
+        : null;
+
+    if (!rows) {
+      throw new Error("JSON-filen måste innehålla en lista med månadsrader.");
+    }
+
+    const validRows = rows.map(row => {
+      if (!row || typeof row !== "object") return null;
+
+      const year = Number(row.year);
+      const month = Number(row.month);
+      const usage = Number(row.usage ?? row.kWh ?? row.kwh ?? row.consumption);
+      const rawCost = row.cost ?? row.costSEK;
+      const cost = rawCost === undefined || rawCost === null || rawCost === ""
+        ? null
+        : Number(rawCost);
+
+      if (!Number.isInteger(year) ||
+          !Number.isInteger(month) || month < 1 || month > 12 ||
+          !Number.isFinite(usage) || usage < 0 ||
+          (cost !== null && (!Number.isFinite(cost) || cost < 0))) {
+        return null;
+      }
+
+      return { year, month, usage, cost };
+    }).filter(Boolean);
+
+    if (validRows.length === 0) {
+      throw new Error("Inga giltiga rader hittades. Kontrollera år, månad och förbrukning.");
+    }
+
+    return validRows;
+  }
+
+  function costOf(row) {
+    return row.cost ?? row.usage * DEFAULT_RATE;
+  }
+
+  function rowsFor(year) {
+    return records
+      .filter(row => row.year === year)
+      .sort((a, b) => a.month - b.month);
+  }
+
+  function render() {
+    const select = $("yearSelect");
+    const years = [...new Set(records.map(row => row.year))]
+      .sort((a, b) => b - a);
+    const previousSelection = Number(select.value);
+
+    select.innerHTML = years
+      .map(year => `<option value="${year}">${year}</option>`)
+      .join("");
+
+    if (years.length === 0) {
+      $("yearUsage").textContent = "—";
+      $("yearCost").textContent = "—";
+      $("savings").textContent = "—";
+      $("savingsNote").textContent = "Importera data för att visa jämförelse.";
+      $("dataRows").innerHTML = "";
+      $("dataHint").textContent = "Ingen data ännu. Importera en JSON-fil.";
+      drawLine($("usageChart"), []);
+      drawPie($("costChart"), []);
+      return;
+    }
+
+    const year = years.includes(previousSelection) ? previousSelection : years[0];
+    select.value = String(year);
+
+    const data = rowsFor(year);
+    const totalUsage = data.reduce((sum, row) => sum + row.usage, 0);
+    const totalCost = data.reduce((sum, row) => sum + costOf(row), 0);
+    const previousData = rowsFor(year - 1);
+
+    $("yearUsage").textContent = format(totalUsage);
+    $("yearCost").textContent = `${format(totalCost)} kr`;
+
+    if (previousData.length > 0) {
+      const previousCost = previousData.reduce((sum, row) => sum + costOf(row), 0);
+      const difference = previousCost - totalCost;
+
+      $("savings").textContent =
+        `${difference >= 0 ? "+" : "−"}${format(Math.abs(difference))} kr`;
+      $("savingsNote").textContent =
+        difference >= 0
+          ? `lägre kostnad än ${year - 1}`
+          : `högre kostnad än ${year - 1}`;
+    } else {
+      $("savings").textContent = "—";
+      $("savingsNote").textContent =
+        `Importera även data för ${year - 1} för jämförelse.`;
+    }
+
+    $("dataRows").innerHTML = data.map(row => `
+      <tr>
+        <td>${MONTHS[row.month - 1]} ${row.year}</td>
+        <td>${format(row.usage)}</td>
+        <td>${format(costOf(row))}</td>
+      </tr>
+    `).join("");
+
+    $("dataHint").textContent =
+      `Kostnad utan cost-värde uppskattas med ${format(DEFAULT_RATE)} kr/kWh.`;
+
+    drawLine($("usageChart"), data);
+    drawPie($("costChart"), data);
+  }
+
+  function prepareCanvas(canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+
+    canvas.width = Math.max(1, Math.round(rect.width * ratio));
+    canvas.height = Math.max(1, Math.round(rect.height * ratio));
+
+    const context = canvas.getContext("2d");
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+    return { context, width: rect.width, height: rect.height };
+  }
+
+  function drawLine(canvas, data) {
+    const { context: ctx, width, height } = prepareCanvas(canvas);
+    ctx.clearRect(0, 0, width, height);
+
+    const pad = { left: 44, right: 12, top: 16, bottom: 34 };
+    const max = Math.max(1, ...data.map(row => row.usage));
+
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.fillStyle = "#64748b";
+    ctx.font = "12px system-ui";
+    ctx.beginPath();
+    ctx.moveTo(pad.left, pad.top);
+    ctx.lineTo(pad.left, height - pad.bottom);
+    ctx.lineTo(width - pad.right, height - pad.bottom);
+    ctx.stroke();
+
+    if (data.length === 0) {
+      ctx.textAlign = "center";
+      ctx.fillText("Importera data för att visa diagrammet", width / 2, height / 2);
+      return;
+    }
+
+    const xAt = index => pad.left +
+      (data.length === 1
+        ? 0
+        : index * (width - pad.left - pad.right) / (data.length - 1));
+
+    const yAt = value => height - pad.bottom -
+      value / max * (height - pad.top - pad.bottom);
+
+    ctx.strokeStyle = "#2563eb";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+
+    data.forEach((row, index) => {
+      if (index === 0) ctx.moveTo(xAt(index), yAt(row.usage));
+      else ctx.lineTo(xAt(index), yAt(row.usage));
+    });
+
+    ctx.stroke();
+
+    data.forEach((row, index) => {
+      const x = xAt(index);
+      const y = yAt(row.usage);
+
+      ctx.fillStyle = "#2563eb";
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#64748b";
+      ctx.textAlign = "center";
+      ctx.fillText(MONTHS[row.month - 1], x, height - 10);
+    });
+
+    ctx.fillStyle = "#64748b";
+    ctx.textAlign = "right";
+    ctx.fillText(format(max), pad.left - 6, pad.top + 5);
+    ctx.fillText("0", pad.left - 6, height - pad.bottom);
+  }
+
+  function drawPie(canvas, data) {
+    const { context: ctx, width, height } = prepareCanvas(canvas);
+    ctx.clearRect(0, 0, width, height);
+
+    const values = data.map(row => costOf(row));
+    const total = values.reduce((sum, value) => sum + value, 0);
+
+    if (total <= 0) {
+      ctx.fillStyle = "#64748b";
+      ctx.textAlign = "center";
+      ctx.fillText("Ingen kostnadsdata att visa", width / 2, height / 2);
+      return;
+    }
+
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(width, height) * 0.36;
+    let start = -Math.PI / 2;
+
+    values.forEach((value, index) => {
+      if (value <= 0) return;
+
+      const end = start + (value / total) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.arc(centerX, centerY, radius, start, end);
+      ctx.closePath();
+      ctx.fillStyle = COLORS[index % COLORS.length];
+      ctx.fill();
+      start = end;
+    });
+
+    ctx.fillStyle = "#172033";
+    ctx.font = "bold 14px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(`${format(total)} kr`, centerX, centerY + 5);
+  }
+
+  $("jsonFile").addEventListener("change", async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      records = normalizeData(JSON.parse(await file.text()));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      render();
+      $("status").textContent = `Importerade ${records.length} månadsrader från ${file.name}.`;
+    } catch (error) {
+      $("status").textContent = `Importfel: ${error.message}`;
+    }
+
+    event.target.value = "";
+  });
+
+  $("yearSelect").addEventListener("change", render);
+
+  $("exportBtn").addEventListener("click", () => {
+    const year = Number($("yearSelect").value);
+    const data = rowsFor(year);
+
+    if (data.length === 0) {
+      $("status").textContent = "Det finns inga rader att exportera.";
+      return;
+    }
+
+    const rows = [
+      ["År", "Månad", "Förbrukning_kWh", "Kostnad_kr"],
+      ...data.map(row => [
+        row.year,
+        MONTHS[row.month - 1],
+        row.usage,
+        Math.round(costOf(row) * 100) / 100
+      ])
+    ];
+
+    const csv = rows
+      .map(row => row.map(value =>
+        `"${String(value).replaceAll('"', '""')}"`
+      ).join(";"))
+      .join("\r\n");
+
+    const blob = new Blob(["\uFEFF" + csv], {
+      type: "text/csv;charset=utf-8"
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `elkoll-${year}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    $("status").textContent = `CSV-fil för ${year} exporterad.`;
+  });
+
+  async function fetchSE3Price() {
+    const button = $("priceBtn");
+    button.disabled = true;
+    $("spotNote").textContent = "Hämtar dagens pris…";
+
+    const now = new Date();
+    const date = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+    try {
+      const url = `https://www.elprisetjustnu.se/api/v1/prices/${date}_SE3.json`;
+      const response = await fetch(url, { cache: "no-store" });
+
+      if (!response.ok) {
+        throw new Error(`Tjänsten svarade ${response.status}`);
+      }
+
+      const prices = await response.json();
+
+      if (!Array.isArray(prices) || prices.length === 0) {
+        throw new Error("Inga priser hittades för idag.");
+      }
+
+      const current = prices.find(price =>
+        new Date(price.time_start) <= now &&
+        new Date(price.time_end) > now
+      );
+
+      const average = prices.reduce(
+        (sum, price) => sum + Number(price.SEK_per_kWh), 0
+      ) / prices.length;
+
+      $("spotPrice").textContent = current
+        ? `${format(current.SEK_per_kWh)} kr`
+        : "—";
+
+      $("spotNote").textContent =
+        `Dagens snitt: ${format(average)} kr/kWh, spotpris`;
+    } catch (error) {
+      $("spotPrice").textContent = "Ej tillgängligt";
+      $("spotNote").textContent =
+        `Kunde inte hämta priset: ${error.message}`;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  $("priceBtn").addEventListener("click", fetchSE3Price);
+  window.addEventListener("resize", render);
+
+  render();
+  fetchSE3Price();
+})();
+</script>
+</body>
+</html>
