@@ -6,68 +6,482 @@
   <meta name="description" content="SE3-kvartspriser, förbrukningskostnad och planering för kommande dygn.">
   <title>Elkoll – elpris och förbrukning</title>
   <style>
-    :root{color-scheme:light;--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#64748b;--border:#e2e8f0;--blue:#2563eb;--green:#15803d;--green-bg:#dcfce7;--yellow:#a16207;--yellow-bg:#fef3c7;--red:#b91c1c;--red-bg:#fee2e2}
-    *{box-sizing:border-box}body{margin:0;padding:22px;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,sans-serif}main{max-width:1050px;margin:auto}h1{margin:0}h2{margin:0 0 12px;font-size:1.15rem}.muted,small{color:var(--muted)}
-    .card,.toolbar{padding:18px;background:var(--card);border:1px solid var(--border);border-radius:14px}.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:18px 0}.section-heading,.chart-title{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}.section-heading p{margin:2px 0 0}
-    button,.upload{display:inline-block;border:0;border-radius:8px;padding:10px 14px;background:var(--blue);color:#fff;font:inherit;cursor:pointer}button.secondary{background:#e8eefc;color:#1e40af}button:disabled{opacity:.6;cursor:wait}input[type=file]{display:none}select,input[type=number]{padding:9px;border:1px solid var(--border);border-radius:8px;background:#fff;font:inherit}.live{display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border-radius:999px;background:var(--green-bg);color:var(--green);font-size:.85rem;font-weight:700}.live:before{content:"";width:9px;height:9px;border-radius:50%;background:var(--green)}
-    .hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(240px,1fr);gap:14px;margin:16px 0}.hero-price{padding:20px;border-radius:12px;background:linear-gradient(135deg,#eff6ff,#f8fafc);border:1px solid #dbeafe}.hero-price .metric{font-size:clamp(2rem,7vw,3.2rem);line-height:1.15;margin:5px 0;letter-spacing:-.04em}.hero-side{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{padding:14px;border:1px solid var(--border);border-radius:12px}.metric{font-size:1.45rem;font-weight:700}.blue{color:var(--blue)}.green{color:var(--green)}.negative{color:var(--red)}
-    .chart-card{margin:14px 0;padding:16px;border:1px solid var(--border);border-radius:12px;background:#fff}.chart{display:grid;grid-template-columns:repeat(var(--count,7),minmax(4px,1fr));align-items:end;gap:7px;height:160px;margin-top:12px;border-bottom:1px solid var(--border);background:repeating-linear-gradient(to bottom,transparent 0,transparent 39px,#f1f5f9 40px)}.day{display:flex;min-width:0;height:100%;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px}.bar{width:min(36px,80%);min-height:2px;border-radius:4px 4px 0 0;background:#93c5fd}.bar.today{background:var(--blue)}.bar-label{font-size:.72rem;color:var(--muted);white-space:nowrap}.bar-value{font-size:.68rem;color:var(--muted)}
-    .planner{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end;margin:12px 0}.field label{display:block;font-size:.9rem;font-weight:600;margin-bottom:4px}.field select,.field input{width:100%}.recommendation{padding:16px;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:12px;margin:14px 0}.recommendation h3{margin:0 0 6px}.recommendation .metric{font-size:1.5rem}.recommendation-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.recommendation-item{border:1px solid var(--border);border-radius:10px;padding:12px}
-    .legend{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 9px;font-size:.78rem;font-weight:700}.pill.cheap{background:var(--green-bg);color:var(--green)}.pill.mid{background:var(--yellow-bg);color:var(--yellow)}.pill.expensive{background:var(--red-bg);color:var(--red)}.pill.current-pill{background:#dbeafe;color:#1d4ed8}.price-cheap{background:var(--green-bg);color:#166534}.price-mid{background:var(--yellow-bg);color:#854d0e}.price-expensive{background:var(--red-bg);color:#991b1b}.price-negative{background:#f3e8ff;color:#7e22ce}.bar.price-cheap{background:#22c55e}.bar.price-mid{background:#eab308}.bar.price-expensive{background:#ef4444}.bar.price-negative{background:#a855f7}.bar.current-bar{outline:2px solid #1d4ed8;outline-offset:1px;z-index:1}.recommendation-item.best{border-color:#86efac;background:#f0fdf4}.price-footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin:10px 0}.table-wrap{overflow:auto;max-height:55vh;margin-top:12px}table{width:100%;border-collapse:collapse}th,td{padding:9px 10px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}th{position:sticky;top:0;background:var(--card);color:var(--muted);font-weight:600}tr.current{box-shadow:inset 4px 0 #2563eb;font-weight:700}details summary{cursor:pointer;font-weight:600}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin:14px 0}pre{overflow:auto;padding:12px;border-radius:8px;background:#f1f5f9}
-    @media(max-width:700px){body{padding:14px}.card,.toolbar{padding:14px}.hero{grid-template-columns:1fr}.chart{height:135px;gap:3px}}
+    :root {
+      color-scheme: light;
+      --bg: #f4f7fb;
+      --card: #fff;
+      --text: #172033;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --blue: #2563eb;
+      --blue-soft: #dbeafe;
+      --green: #15803d;
+      --green-bg: #dcfce7;
+      --green-strong: #16a34a;
+      --yellow: #a16207;
+      --yellow-bg: #fef3c7;
+      --yellow-strong: #d97706;
+      --red: #b91c1c;
+      --red-bg: #fee2e2;
+      --red-strong: #dc2626;
+      --purple: #7e22ce;
+      --purple-bg: #f3e8ff;
+      --current: #1d4ed8;
+      --current-bg: #eff6ff;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 22px; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, sans-serif; }
+    main { max-width: 1050px; margin: auto; }
+    h1 { margin: 0; }
+    h2 { margin: 0 0 12px; font-size: 1.15rem; }
+    .muted, small { color: var(--muted); }
+    .card, .toolbar { padding: 18px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 18px 0; }
+    .section-heading, .chart-title { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+    .section-heading p { margin: 2px 0 0; }
+    button, .upload { display: inline-block; border: 0; border-radius: 8px; padding: 10px 14px; background: var(--blue); color: #fff; font: inherit; cursor: pointer; }
+    button.secondary { background: #e8eefc; color: #1e40af; }
+    button:disabled { opacity: .6; cursor: wait; }
+    input[type=file] { display: none; }
+    select, input[type=number] { padding: 9px; border: 1px solid var(--border); border-radius: 8px; background: #fff; font: inherit; }
+    .live { display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 999px; background: var(--green-bg); color: var(--green); font-size: .85rem; font-weight: 700; }
+    .live:before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
+    .hero { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(240px, 1fr); gap: 14px; margin: 16px 0; }
+    .hero-price { padding: 20px; border-radius: 12px; background: linear-gradient(135deg, #eff6ff, #f8fafc); border: 1px solid #dbeafe; }
+    .hero-price .metric { font-size: clamp(2rem, 7vw, 3.2rem); line-height: 1.15; margin: 5px 0; letter-spacing: -.04em; }
+    .hero-side { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat { padding: 14px; border: 1px solid var(--border); border-radius: 12px; }
+    .metric { font-size: 1.45rem; font-weight: 700; }
+    .blue { color: var(--blue); }
+    .green { color: var(--green); }
+    .negative { color: var(--red); }
+    .chart-card { margin: 14px 0; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+    .chart { display: grid; grid-template-columns: repeat(var(--count, 7), minmax(4px, 1fr)); align-items: end; gap: 7px; height: 160px; margin-top: 12px; border-bottom: 1px solid var(--border); background: repeating-linear-gradient(to bottom, transparent 0, transparent 39px, #f1f5f9 40px); }
+    .day { display: flex; min-width: 0; height: 100%; flex-direction: column; justify-content: flex-end; align-items: center; gap: 5px; }
+    .bar { width: min(36px, 80%); min-height: 2px; border-radius: 4px 4px 0 0; background: #93c5fd; }
+    .bar.today { background: var(--blue); }
+    .bar-label { font-size: .72rem; color: var(--muted); white-space: nowrap; }
+    .bar-value { font-size: .68rem; color: var(--muted); }
+    .planner { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; align-items: end; margin: 12px 0; }
+    .field label { display: block; font-size: .9rem; font-weight: 600; margin-bottom: 4px; }
+    .field select, .field input { width: 100%; }
+    .recommendation { padding: 16px; border: 1px solid #bbf7d0; background: #f0fdf4; border-radius: 12px; margin: 14px 0; }
+    .recommendation h3 { margin: 0 0 6px; }
+    .recommendation .metric { font-size: 1.5rem; }
+    .recommendation-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+    .recommendation-item { border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+    .recommendation-item.best { border-color: #86efac; background: #f0fdf4; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 9px; font-size: .78rem; font-weight: 700; }
+    .pill.cheap { background: var(--green-bg); color: var(--green-strong); }
+    .pill.mid { background: var(--yellow-bg); color: var(--yellow-strong); }
+    .pill.expensive { background: var(--red-bg); color: var(--red-strong); }
+    .pill.current-pill { background: var(--blue-soft); color: var(--blue); }
+    .price-cheap { background: var(--green-bg); color: var(--green-strong); border-left: 4px solid var(--green-strong); }
+    .price-mid { background: var(--yellow-bg); color: var(--yellow-strong); border-left: 4px solid var(--yellow-strong); }
+    .price-expensive { background: var(--red-bg); color: var(--red-strong); border-left: 4px solid var(--red-strong); }
+    .price-negative { background: var(--purple-bg); color: var(--purple); border-left: 4px solid var(--purple); }
+    .price-current { background: var(--current-bg); color: var(--current); border-left: 4px solid var(--current); }
+    .bar.price-cheap { background: var(--green-strong); }
+    .bar.price-mid { background: var(--yellow-strong); }
+    .bar.price-expensive { background: var(--red-strong); }
+    .bar.price-negative { background: var(--purple); }
+    .bar.current-bar { outline: 2px solid var(--current); outline-offset: 1px; z-index: 1; }
+    .price-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin: 10px 0; }
+    .table-wrap { overflow: auto; max-height: 55vh; margin-top: 12px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+    th:first-child, td:first-child { text-align: left; }
+    th { position: sticky; top: 0; background: var(--card); color: var(--muted); font-weight: 600; }
+    tr.current { background: linear-gradient(90deg, rgba(37,99,235,0.11), rgba(37,99,235,0.03)); font-weight: 700; box-shadow: inset 0 0 0 2px rgba(29,78,216,0.28); }
+    details summary { cursor: pointer; font-weight: 600; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin: 14px 0; }
+    pre { overflow: auto; padding: 12px; border-radius: 8px; background: #f1f5f9; }
+    @media (max-width: 700px) { body { padding: 14px; } .card, .toolbar { padding: 14px; } .hero { grid-template-columns: 1fr; } .chart { height: 135px; gap: 3px; } }
   </style>
 </head>
-<body><main>
-  <h1>⚡ Elkoll</h1><p class="muted">SE3-kvartspriser, kostnad med din förbrukning och billigare tidsfönster för kommande dygn.</p>
+<body>
+<main>
+  <h1>⚡ Elkoll</h1>
+  <p class="muted">SE3-kvartspriser, kostnad med din förbrukning och billigare tidsfönster för kommande dygn.</p>
   <section class="card" aria-labelledby="priceHeading">
-    <div class="section-heading"><div><h2 id="priceHeading">Elpris och kostnad · SE3</h2><p id="priceDate" class="muted">Hämtar priser…</p></div><div style="display:flex;align-items:center;gap:12px"><span class="live">LIVE</span><button id="refreshPrices">Uppdatera priser</button></div></div>
-    <div class="hero"><article class="hero-price" aria-live="polite"><div class="muted">Spotpris just nu</div><div id="currentPrice" class="metric blue">—</div><div id="currentInterval" class="muted">Väntar på prisdata</div><div id="countdown" class="muted">—</div><hr style="border:0;border-top:1px solid #dbeafe;margin:14px 0"><div class="muted">Uppskattad spotkostnad för huset detta kvart</div><div id="currentCost" class="metric green">—</div><div id="currentUsageNote" class="muted">Importera kvartförbrukning för beräkning.</div></article>
-      <div class="hero-side"><article class="stat"><div class="muted">Dagens snitt</div><div id="averagePrice" class="metric">—</div></article><article class="stat"><div class="muted">Lägsta idag</div><div id="minPrice" class="metric green">—</div><div id="minInterval" class="muted"></div></article><article class="stat"><div class="muted">Högsta idag</div><div id="maxPrice" class="metric">—</div><div id="maxInterval" class="muted"></div></article><article class="stat"><div class="muted">Förbrukningsdata</div><div id="usageSummary" class="metric">Saknas</div><div class="muted">importerade kvartsvärden</div></article></div>
+    <div class="section-heading">
+      <div>
+        <h2 id="priceHeading">Elpris och kostnad · SE3</h2>
+        <p id="priceDate" class="muted">Hämtar priser…</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px"><span class="live">LIVE</span><button id="refreshPrices">Uppdatera priser</button></div>
+    </div>
+    <div class="hero">
+      <article class="hero-price" aria-live="polite">
+        <div class="muted">Spotpris just nu</div>
+        <div id="currentPrice" class="metric blue">—</div>
+        <div id="currentInterval" class="muted">Väntar på prisdata</div>
+        <div id="countdown" class="muted">—</div>
+        <hr style="border:0;border-top:1px solid #dbeafe;margin:14px 0">
+        <div class="muted">Uppskattad spotkostnad för huset detta kvart</div>
+        <div id="currentCost" class="metric green">—</div>
+        <div id="currentUsageNote" class="muted">Importera kvartförbrukning för beräkning.</div>
+      </article>
+      <div class="hero-side">
+        <article class="stat"><div class="muted">Dagens snitt</div><div id="averagePrice" class="metric">—</div></article>
+        <article class="stat"><div class="muted">Lägsta idag</div><div id="minPrice" class="metric green">—</div><div id="minInterval" class="muted"></div></article>
+        <article class="stat"><div class="muted">Högsta idag</div><div id="maxPrice" class="metric">—</div><div id="maxInterval" class="muted"></div></article>
+        <article class="stat"><div class="muted">Förbrukningsdata</div><div id="usageSummary" class="metric">Saknas</div><div class="muted">importerade kvartsvärden</div></article>
+      </div>
     </div>
     <section class="chart-card"><div class="chart-title"><h3>Pristrend · senaste 7 dagarna</h3><span class="muted">Dagens medelpris per dygn, kr/kWh</span></div><div id="weekChart" class="chart" role="img" aria-label="Veckans medelpriser"></div><p id="weekStatus" class="muted" role="status">Hämtar veckans priser…</p></section>
-    <section class="chart-card" aria-labelledby="plannerHeading"><div class="chart-title"><h3 id="plannerHeading">Planera värme eller laddning · kommande dygn</h3><span class="muted">Baserat på tillgängliga spotpriser</span></div>
-      <div class="planner"><div class="field"><label for="duration">Körtid</label><select id="duration"><option value="1">1 timme</option><option value="2" selected>2 timmar</option><option value="3">3 timmar</option><option value="4">4 timmar</option><option value="6">6 timmar</option><option value="8">8 timmar</option></select></div><div class="field"><label for="power">Effekt (kW), valfritt</label><input id="power" type="number" min="0" step="0.1" value="7.4"></div><div class="field"><label for="topCount">Visa förslag</label><select id="topCount"><option value="3">3 billigaste</option><option value="5" selected>5 billigaste</option><option value="10">10 billigaste</option></select></div><button id="updatePlanner" class="secondary" type="button">Uppdatera förslag</button></div>
+    <section class="chart-card" aria-labelledby="plannerHeading">
+      <div class="chart-title"><h3 id="plannerHeading">Planera värme eller laddning · kommande dygn</h3><span class="muted">Baserat på tillgängliga spotpriser</span></div>
+      <div class="planner">
+        <div class="field"><label for="duration">Körtid</label><select id="duration"><option value="1">1 timme</option><option value="2" selected>2 timmar</option><option value="3">3 timmar</option><option value="4">4 timmar</option><option value="6">6 timmar</option><option value="8">8 timmar</option></select></div>
+        <div class="field"><label for="power">Effekt (kW), valfritt</label><input id="power" type="number" min="0" step="0.1" value="7.4"></div>
+        <div class="field"><label for="topCount">Visa förslag</label><select id="topCount"><option value="3">3 billigaste</option><option value="5" selected>5 billigaste</option><option value="10">10 billigaste</option></select></div>
+        <button id="updatePlanner" class="secondary" type="button">Uppdatera förslag</button>
+      </div>
       <div class="legend" aria-label="Prisnivåer"><span class="pill cheap">Billigt · lägsta tredjedel</span><span class="pill mid">Mellanpris</span><span class="pill expensive">Dyrt · högsta tredjedel</span></div>
-      <div id="bestWindow" class="recommendation"><h3>Billigaste sammanhängande tidsfönster</h3><div id="bestWindowTime" class="metric">Väntar på priser för kommande dygn…</div><div id="bestWindowDetail" class="muted"></div></div><div id="otherWindows" class="recommendation-list"></div><p id="plannerStatus" class="muted" role="status">Förslagen sorteras efter genomsnittligt spotpris för vald körtid.</p>
+      <div id="bestWindow" class="recommendation"><h3>Billigaste sammanhängande tidsfönster</h3><div id="bestWindowTime" class="metric">Väntar på priser för kommande dygn…</div><div id="bestWindowDetail" class="muted"></div></div>
+      <div id="otherWindows" class="recommendation-list"></div>
+      <p id="plannerStatus" class="muted" role="status">Förslagen sorteras efter genomsnittligt spotpris för vald körtid.</p>
     </section>
     <div class="price-footer"><p id="priceStatus" class="muted" role="status" aria-live="polite">Uppdateras automatiskt var 15:e minut.</p><small>Spotpris i kr/kWh; skatt, moms, nätavgift och påslag tillkommer.</small></div>
     <div class="legend"><span class="pill cheap">Billigt</span><span class="pill mid">Mellanpris</span><span class="pill expensive">Dyrt</span><span class="pill current-pill">Nuvarande kvart</span></div>
-    <details><summary>Visa dagens alla kvartspriser</summary><div class="table-wrap"><table><thead><tr><th>Tid</th><th>Pris (kr/kWh)</th><th>Förbrukning (kWh)</th><th>Spotkostnad (kr)</th><th>Prisnivå</th></tr></thead><tbody id="priceRows"><tr><td colspan="5" class="muted">Väntar på prisdata…</td></tr></tbody></table></div></details>
+    <details>
+      <summary>Visa dagens alla kvartspriser</summary>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tid</th><th>Pris (kr/kWh)</th><th>Förbrukning (kWh)</th><th>Spotkostnad (kr)</th><th>Prisnivå</th></tr></thead>
+          <tbody id="priceRows"><tr><td colspan="5" class="muted">Väntar på prisdata…</td></tr></tbody>
+        </table>
+      </div>
+    </details>
     <p><small>Prisdata från <a href="https://www.elprisetjustnu.se/elpris-api" target="_blank" rel="noopener noreferrer">elprisetjustnu.se</a>. Kostnad är spotpris × importerat mätvärde, inte hela elräkningen.</small></p>
   </section>
-  <section class="toolbar" aria-label="Förbrukningsdata"><label class="upload" for="usageFile">Importera förbrukning</label><input id="usageFile" type="file" accept=".csv,.json,text/csv,application/json"><button id="downloadTemplate" class="secondary">Ladda ner CSV-mall</button><button id="clearUsage" class="secondary">Rensa mätvärden</button><span id="usageStatus" class="muted" role="status" aria-live="polite">Ingen kvartförbrukning importerad.</span></section>
-  <details class="card"><summary>Enkelt importformat</summary><p>CSV-mallen har två kolumner: <code>timestamp;kWh</code>. En rad per kvart, med tidszon:</p><pre>timestamp;kWh
+  <section class="toolbar" aria-label="Förbrukningsdata">
+    <label class="upload" for="usageFile">Importera förbrukning</label>
+    <input id="usageFile" type="file" accept=".csv,.json,text/csv,application/json">
+    <button id="downloadTemplate" class="secondary">Ladda ner CSV-mall</button>
+    <button id="clearUsage" class="secondary">Rensa mätvärden</button>
+    <span id="usageStatus" class="muted" role="status" aria-live="polite">Ingen kvartförbrukning importerad.</span>
+  </section>
+  <details class="card">
+    <summary>Enkelt importformat</summary>
+    <p>CSV-mallen har två kolumner: <code>timestamp;kWh</code>. En rad per kvart, med tidszon:</p>
+    <pre>timestamp;kWh
 2026-11-10T12:00:00+01:00;0,42
-2026-11-10T12:15:00+01:00;0,38</pre><p>JSON går också bra, exempelvis <code>[{"timestamp":"2026-11-10T12:00:00+01:00","kWh":0.42}]</code>. Data sparas lokalt i webbläsaren.</p></details>
-  <section class="toolbar" aria-label="Månadsdata"><label class="upload" for="jsonFile">Importera månadsdata (JSON)</label><input id="jsonFile" type="file" accept=".json,application/json"><label for="yearSelect">År:</label><select id="yearSelect" aria-label="Välj år"></select><button id="exportBtn" class="secondary">Exportera CSV</button><span id="monthlyStatus" class="muted" role="status">Importera månadsdata för att visa sammanställning.</span></section>
-  <section class="grid"><article class="card"><h2>Årsförbrukning</h2><div id="yearUsage" class="metric blue">—</div><div>kWh</div></article><article class="card"><h2>Uppskattad årskostnad</h2><div id="yearCost" class="metric green">—</div><div>kr</div></article><article class="card"><h2>Skillnad mot föregående år</h2><div id="savings" class="metric">—</div><div id="savingsNote" class="muted">Importera data för två år.</div></article></section>
-  <section class="card"><h2>Månadsdata</h2><div class="table-wrap"><table><thead><tr><th>Månad</th><th>Förbrukning (kWh)</th><th>Kostnad (kr)</th></tr></thead><tbody id="dataRows"></tbody></table></div><p id="dataHint" class="muted">Ingen data ännu. Importera en JSON-fil.</p></section>
+2026-11-10T12:15:00+01:00;0,38</pre>
+    <p>JSON går också bra, exempelvis <code>[{"timestamp":"2026-11-10T12:00:00+01:00","kWh":0.42}]</code>. Data sparas lokalt i webbläsaren.</p>
+  </details>
+  <section class="toolbar" aria-label="Månadsdata">
+    <label class="upload" for="jsonFile">Importera månadsdata (JSON)</label>
+    <input id="jsonFile" type="file" accept=".json,application/json">
+    <label for="yearSelect">År:</label>
+    <select id="yearSelect" aria-label="Välj år"></select>
+    <button id="exportBtn" class="secondary">Exportera CSV</button>
+    <span id="monthlyStatus" class="muted" role="status">Importera månadsdata för att visa sammanställning.</span>
+  </section>
+  <section class="grid">
+    <article class="card"><h2>Årsförbrukning</h2><div id="yearUsage" class="metric blue">—</div><div>kWh</div></article>
+    <article class="card"><h2>Uppskattad årskostnad</h2><div id="yearCost" class="metric green">—</div><div>kr</div></article>
+    <article class="card"><h2>Skillnad mot föregående år</h2><div id="savings" class="metric">—</div><div id="savingsNote" class="muted">Importera data för två år.</div></article>
+  </section>
+  <section class="card">
+    <h2>Månadsdata</h2>
+    <div class="table-wrap"><table><thead><tr><th>Månad</th><th>Förbrukning (kWh)</th><th>Kostnad (kr)</th></tr></thead><tbody id="dataRows"></tbody></table></div>
+    <p id="dataHint" class="muted">Ingen data ännu. Importera en JSON-fil.</p>
+  </section>
 </main>
 <script>
-(()=>{'use strict';
-const TZ='Europe/Stockholm',AREA='SE3',UK='elkoll-quarter-usage-v1',MK='elkoll-monthly-data-v1',RATE=2.27,MONTHS=['Jan','Feb','Mar','Apr','Maj','Jun','Jul','Aug','Sep','Okt','Nov','Dec'],$=id=>document.getElementById(id),fmt=n=>Number(n).toLocaleString('sv-SE',{minimumFractionDigits:2,maximumFractionDigits:4}),fmtPrice=n=>`${fmt(n)} kr/kWh`;
-let usage=read(UK,{}),monthly=read(MK,[]),todayPrices=[],plannerPrices=[],weekDays=[],busy=false,timer,clock;
-function read(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}
-function key(date=new Date()){const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));return `${p.year}-${p.month}-${p.day}`}
-function shift(k,n){const[y,m,d]=k.split('-').map(Number),x=new Date(Date.UTC(y,m-1,d+n));return `${x.getUTCFullYear()}-${String(x.getUTCMonth()+1).padStart(2,'0')}-${String(x.getUTCDate()).padStart(2,'0')}`}
-function api(k){const[y,m,d]=k.split('-');return `${y}/${m}-${d}`}
-function tm(ms,date=false){return new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,...(date?{day:'2-digit',month:'2-digit'}:{}),hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(ms))}
-function parse(data){return Array.isArray(data)?data.map(x=>({value:Number(x.SEK_per_kWh),start:Date.parse(x.time_start),end:Date.parse(x.time_end)})).filter(x=>Number.isFinite(x.value)&&Number.isFinite(x.start)&&Number.isFinite(x.end)&&x.end>x.start):[]}
-async function getDay(k){const r=await fetch(`https://www.elprisetjustnu.se/api/v1/prices/${api(k)}_${AREA}.json`,{cache:'no-store'});if(!r.ok)throw Error(`HTTP ${r.status}`);return parse(await r.json())}
-function levels(values){const sorted=values.filter(Number.isFinite).sort((a,b)=>a-b);if(!sorted.length)return{low:0,high:0};return{low:sorted[Math.floor((sorted.length-1)/3)],high:sorted[Math.floor((sorted.length-1)*2/3)]}}
-function priceClass(v,b){if(v<0)return'price-negative';if(v<=b.low)return'price-cheap';if(v>=b.high)return'price-expensive';return'price-mid'}
-function renderWeek(){const el=$('weekChart');el.replaceChildren();el.style.setProperty('--count',Math.max(1,weekDays.length));const vals=weekDays.map(x=>x.avg).filter(Number.isFinite),lo=Math.min(0,...vals),hi=Math.max(...vals),span=hi-lo||1,b=levels(vals);weekDays.forEach(d=>{const c=document.createElement('div');c.className='day';if(Number.isFinite(d.avg)){const v=document.createElement('span');v.className='bar-value';v.textContent=fmt(d.avg);const bar=document.createElement('span');bar.className=`bar ${priceClass(d.avg,b)}${d.key===key()?' today':''}`;bar.style.height=`${Math.max(3,5+(d.avg-lo)/span*90)}%`;bar.title=`${d.key}: ${fmtPrice(d.avg)} · ${d.count} intervall`;c.append(v,bar)}else{const na=document.createElement('span');na.className='muted';na.textContent='—';c.append(na)}const l=document.createElement('span');l.className='bar-label';l.textContent=d.key.slice(8)+'.'+d.key.slice(5,7);c.append(l);el.append(c)});$('weekStatus').textContent=`${weekDays.filter(x=>Number.isFinite(x.avg)).length} av ${weekDays.length} dagar har prisdata. Färger visar relativ prisnivå inom veckan.`}
-function findWindows(){const duration=Number($('duration').value),endLength=duration*3600000,now=Date.now(),ps=plannerPrices.filter(p=>p.end>now).sort((a,b)=>a.start-b.start),out=[];for(let i=0;i<ps.length;i++){const start=Math.max(now,ps[i].start),end=start+endLength;let cursor=start,total=0,covered=0,ok=true;for(let j=i;j<ps.length&&cursor<end;j++){const p=ps[j];if(p.start>cursor+1000){ok=false;break}if(p.end<=cursor)continue;const a=Math.max(cursor,p.start),z=Math.min(end,p.end);if(z>a){const h=(z-a)/3600000;total+=p.value*h;covered+=h;cursor=z}}if(ok&&covered>=duration-1e-6&&cursor>=end-1000&&!out.some(x=>Math.abs(x.start-start)<60000))out.push({start,end,avg:total/duration})}return out.sort((a,b)=>a.avg-b.avg).slice(0,Number($('topCount').value))}
-function renderPlanner(){const wins=findWindows(),duration=Number($('duration').value),power=Number($('power').value);if(!wins.length){$('bestWindowTime').textContent='Inga tillgängliga prisfönster';$('bestWindowDetail').textContent='Morgondagens priser kan saknas innan de publiceras. Försök igen senare.';$('otherWindows').replaceChildren();$('plannerStatus').textContent='Planen kräver sammanhängande prisdata under hela körtiden.';return}const bounds=levels(plannerPrices.map(x=>x.value)),best=wins[0],label=w=>`${tm(w.start,true)}–${tm(w.end,true)}`;$('bestWindowTime').textContent=label(best);$('bestWindowDetail').textContent=`${fmtPrice(best.avg)}${Number.isFinite(power)&&power>0?` · cirka ${fmt(best.avg*power*duration)} kr för ${fmt(power)} kW i ${duration} h`:''} · spotpris.`;$('bestWindow').classList.toggle('price-cheap',best.avg<=bounds.low);const list=$('otherWindows');list.replaceChildren();wins.slice(1).forEach((w,i)=>{const box=document.createElement('div');box.className=`recommendation-item ${priceClass(w.avg,bounds)}`;const strong=document.createElement('strong');strong.textContent=`${i+2}. ${label(w)}`;const detail=document.createElement('span');detail.textContent=`${fmtPrice(w.avg)}${power>0?` · ca ${fmt(w.avg*power*duration)} kr`:''}`;box.append(strong,detail);list.append(box)});$('plannerStatus').textContent=`Visar ${wins.length} billigaste sammanhängande fönster. Grönt = lågpris, gult = mellanpris, rött = högpris.`}
-function renderToday(){if(!todayPrices.length)return;const now=Date.now(),ps=[...todayPrices].sort((a,b)=>a.start-b.start),current=ps.find(p=>p.start<=now&&now<p.end),min=ps.reduce((a,b)=>a.value<b.value?a:b),max=ps.reduce((a,b)=>a.value>b.value?a:b),avg=ps.reduce((s,p)=>s+p.value,0)/ps.length,b=levels(ps.map(p=>p.value));$('currentPrice').textContent=current?fmtPrice(current.value):'Pris saknas just nu';$('currentPrice').classList.toggle('negative',!!current&&current.value<0);$('currentInterval').textContent=current?`Gäller ${tm(current.start)}–${tm(current.end)}`:'Inget aktuellt intervall';$('countdown').textContent=current?`Nytt kvart om ${Math.max(0,Math.ceil((current.end-now)/60000))} min`:'';$('averagePrice').textContent=fmtPrice(avg);$('minPrice').textContent=fmtPrice(min.value);$('minInterval').textContent=tm(min.start);$('maxPrice').textContent=fmtPrice(max.value);$('maxInterval').textContent=tm(max.start);const k=current?usage[String(current.start)]:null;$('currentCost').textContent=current&&Number.isFinite(k)?`${fmt(k*current.value)} kr`:'—';$('currentUsageNote').textContent=current&&Number.isFinite(k)?`${fmt(k)} kWh × ${fmtPrice(current.value)} · spotkostnad`:'Mätvärde saknas för aktuellt kvart.';$('usageSummary').textContent=Object.keys(usage).length?`${Object.keys(usage).length} kvart`:'Saknas';const body=$('priceRows');body.replaceChildren();ps.forEach(p=>{const tr=document.createElement('tr'),isNow=current&&current.start===p.start,kwh=usage[String(p.start)],cls=priceClass(p.value,b);if(isNow)tr.className='current';const values=[`${tm(p.start)}–${tm(p.end)}`,fmt(p.value),Number.isFinite(kwh)?fmt(kwh):'—',Number.isFinite(kwh)?`${fmt(kwh*p.value)} kr`:'—'];values.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i===1)td.className=cls;tr.append(td)});const level=document.createElement('td'),pill=document.createElement('span');pill.className=`pill ${cls==='price-cheap'?'cheap':cls==='price-expensive'?'expensive':cls==='price-negative'?'cheap':'mid'}`;pill.textContent=cls==='price-cheap'?'Billigt':cls==='price-expensive'?'Dyrt':cls==='price-negative'?'Negativt':'Mellan';if(isNow)pill.textContent+=' · Nu';level.append(pill);tr.append(level);body.append(tr)})}
-async function loadPrices(){if(busy)return;busy=true;$('refreshPrices').disabled=true;$('priceStatus').textContent='Hämtar SE3-priser…';try{const today=key(),days=Array.from({length:7},(_,i)=>shift(today,i-6)),result=await Promise.all(days.map(async k=>{try{return[k,await getDay(k)]}catch{return[k,[]]}}));weekDays=result.map(([k,ps])=>({key:k,count:ps.length,avg:ps.length?ps.reduce((s,p)=>s+p.value,0)/ps.length:NaN}));todayPrices=result.find(([k])=>k===today)?.[1]??[];let tomorrow=[];try{tomorrow=await getDay(shift(today,1))}catch{}plannerPrices=[...todayPrices,...tomorrow].sort((a,b)=>a.start-b.start);renderWeek();renderToday();renderPlanner();$('priceDate').textContent=`Priser för ${today} · SE3`;$('priceStatus').textContent=`${todayPrices.length} intervall idag${tomorrow.length?` och ${tomorrow.length} imorgon`:'; morgondagens priser publiceras senare'}. Senast uppdaterad ${tm(Date.now())}.`;if(!todayPrices.length)throw Error('Dagens priser är inte tillgängliga just nu.')}catch(e){$('priceStatus').textContent=`Kunde inte hämta alla priser: ${e.message}`;if(!todayPrices.length)$('currentPrice').textContent='Ej tillgängligt'}finally{busy=false;$('refreshPrices').disabled=false}}
-function parseUsage(rows){if(!Array.isArray(rows))throw Error('Förväntade en lista med mätvärden.');const out=[];rows.forEach(r=>{const stamp=r?.timestamp??r?.time_start??r?.time,raw=r?.kWh??r?.kwh??r?.usage_kWh??r?.consumption,ms=Date.parse(stamp),v=Number(String(raw??'').replace(',','.'));if(Number.isFinite(ms)&&Number.isFinite(v)&&v>=0)out.push([String(ms),v])});if(!out.length)throw Error('Inga giltiga mätvärden. Använd timestamp och kWh med ISO-tidsstämpel inklusive tidszon.');return out}
-function parseCsv(text){const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());if(lines.length<2)throw Error('CSV-filen saknar mätvärden.');const sep=lines[0].includes(';')?';':',',heads=lines[0].split(sep).map(x=>x.trim().toLowerCase().replace(/^"|"$/g,'')),ti=heads.indexOf('timestamp'),ki=heads.indexOf('kwh');if(ti<0||ki<0)throw Error('CSV-rubriker ska vara timestamp;kWh.');return parseUsage(lines.slice(1).map(line=>{const c=line.split(sep).map(x=>x.trim().replace(/^"|"$/g,''));return{timestamp:c[ti],kWh:c[ki]}}))}
-$('usageFile').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const text=await f.text(),rows=f.name.toLowerCase().endsWith('.csv')?parseCsv(text):parseUsage(JSON.parse(text));rows.forEach(([k,v])=>usage[k]=v);localStorage.setItem(UK,JSON.stringify(usage));$('usageStatus').textContent=`Importerade ${rows.length} kvartsvärden från ${f.name}.`;renderToday()}catch(err){$('usageStatus').textContent=`Importfel: ${err.message}`}e.target.value=''});
-$('downloadTemplate').addEventListener('click',()=>{const blob=new Blob(['timestamp;kWh\r\n2026-11-10T12:00:00+01:00;0,42\r\n2026-11-10T12:15:00+01:00;0,38\r\n'],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='elkoll-forbrukning-mall.csv';a.click();URL.revokeObjectURL(url)});$('clearUsage').addEventListener('click',()=>{usage={};localStorage.removeItem(UK);$('usageStatus').textContent='Förbrukningsdata rensad.';renderToday()});
-function costOf(r){return r.cost??r.usage*RATE}function rowsFor(y){return monthly.filter(r=>r.year===y).sort((a,b)=>a.month-b.month)}function renderMonthly(){const s=$('yearSelect'),ys=[...new Set(monthly.map(r=>r.year))].sort((a,b)=>b-a),old=Number(s.value);s.replaceChildren(...ys.map(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;return o}));if(!ys.length){$('yearUsage').textContent='—';$('yearCost').textContent='—';$('savings').textContent='—';$('dataRows').replaceChildren();return}const y=ys.includes(old)?old:ys[0],data=rowsFor(y),prev=rowsFor(y-1);s.value=y;$('yearUsage').textContent=fmt(data.reduce((a,r)=>a+r.usage,0));$('yearCost').textContent=`${fmt(data.reduce((a,r)=>a+costOf(r),0))} kr`;if(prev.length){const d=prev.reduce((a,r)=>a+costOf(r),0)-data.reduce((a,r)=>a+costOf(r),0);$('savings').textContent=`${d>=0?'+':'−'}${fmt(Math.abs(d))} kr`;$('savingsNote').textContent=`${d>=0?'lägre':'högre'} kostnad än ${y-1}`} $('dataRows').innerHTML=data.map(r=>`<tr><td>${MONTHS[r.month-1]} ${r.year}</td><td>${fmt(r.usage)}</td><td>${fmt(costOf(r))}</td></tr>`).join('')}
-$('jsonFile').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const x=JSON.parse(await f.text()),rows=Array.isArray(x)?x:x.data;if(!Array.isArray(rows))throw Error('JSON behöver innehålla månadsrader.');monthly=rows.map(r=>({year:Number(r.year),month:Number(r.month),usage:Number(r.usage??r.kWh??r.kwh??r.consumption),cost:r.cost==null&&r.costSEK==null?null:Number(r.cost??r.costSEK)})).filter(r=>Number.isInteger(r.year)&&Number.isInteger(r.month)&&r.month>=1&&r.month<=12&&Number.isFinite(r.usage)&&r.usage>=0);if(!monthly.length)throw Error('Inga giltiga månadsrader.');localStorage.setItem(MK,JSON.stringify(monthly));renderMonthly();$('monthlyStatus').textContent=`Importerade ${monthly.length} rader.`}catch(err){$('monthlyStatus').textContent=`Importfel: ${err.message}`}e.target.value=''});
-$('yearSelect').addEventListener('change',renderMonthly);$('duration').addEventListener('change',renderPlanner);$('topCount').addEventListener('change',renderPlanner);$('power').addEventListener('input',renderPlanner);$('updatePlanner').addEventListener('click',renderPlanner);$('refreshPrices').addEventListener('click',loadPrices);$('exportBtn').addEventListener('click',()=>{const y=Number($('yearSelect').value),data=rowsFor(y);if(!data.length){$('monthlyStatus').textContent='Inget att exportera.';return}const csv=[['År','Månad','Förbrukning_kWh','Kostnad_kr'],...data.map(r=>[r.year,MONTHS[r.month-1],r.usage,costOf(r)])].map(r=>r.join(';')).join('\r\n'),url=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=`elkoll-${y}.csv`;a.click();URL.revokeObjectURL(url)});
-renderMonthly();loadPrices();timer=setInterval(()=>{if(document.visibilityState==='visible')loadPrices()},900000);clock=setInterval(()=>{renderToday();renderPlanner()},15000);window.addEventListener('focus',()=>{if(document.visibilityState==='visible')loadPrices()});window.addEventListener('beforeunload',()=>{clearInterval(timer);clearInterval(clock)},{once:true});
+(() => {
+  'use strict';
+  const TZ = 'Europe/Stockholm', AREA = 'SE3', UK = 'elkoll-quarter-usage-v1', MK = 'elkoll-monthly-data-v1', RATE = 2.27, MONTHS = ['Jan','Feb','Mar','Apr','Maj','Jun','Jul','Aug','Sep','Okt','Nov','Dec'];
+  const $ = id => document.getElementById(id);
+  const fmt = n => Number(n).toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+  const fmtPrice = n => `${fmt(n)} kr/kWh`;
+  let usage = read(UK, {}), monthly = read(MK, []), todayPrices = [], plannerPrices = [], weekDays = [], busy = false, timer, clock;
+
+  function read(key, fallback) {
+    try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
+  }
+  function key(date = new Date()) {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date).filter(x => x.type !== 'literal').map(x => [x.type, x.value]));
+    return `${parts.year}-${parts.month}-${parts.day}`;
+  }
+  function shift(k, n) {
+    const [y, m, d] = k.split('-').map(Number);
+    const x = new Date(Date.UTC(y, m - 1, d + n));
+    return `${x.getUTCFullYear()}-${String(x.getUTCMonth() + 1).padStart(2, '0')}-${String(x.getUTCDate()).padStart(2, '0')}`;
+  }
+  function api(k) {
+    const [y, m, d] = k.split('-');
+    return `${y}/${m}-${d}`;
+  }
+  function tm(ms, short = false) {
+    return new Intl.DateTimeFormat('sv-SE', { timeZone: TZ, ...(short ? { day: '2-digit', month: '2-digit' } : {}), hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(ms));
+  }
+  function parse(data) {
+    return Array.isArray(data)
+      ? data.map(x => ({ value: Number(x.SEK_per_kWh), start: Date.parse(x.time_start), end: Date.parse(x.time_end) }))
+        .filter(x => Number.isFinite(x.value) && Number.isFinite(x.start) && Number.isFinite(x.end) && x.end > x.start)
+      : [];
+  }
+  async function getDay(k) {
+    const r = await fetch(`https://www.elprisetjustnu.se/api/v1/prices/${api(k)}_${AREA}.json`, { cache: 'no-store' });
+    if (!r.ok) throw Error(`HTTP ${r.status}`);
+    return parse(await r.json());
+  }
+  function levels(values) {
+    const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+    if (!sorted.length) return { low: 0, high: 0 };
+    return { low: sorted[Math.floor((sorted.length - 1) / 3)], high: sorted[Math.floor((sorted.length - 1) * 2 / 3)] };
+  }
+  function priceClass(v, bounds) {
+    if (v < 0) return 'price-negative';
+    if (v <= bounds.low) return 'price-cheap';
+    if (v >= bounds.high) return 'price-expensive';
+    return 'price-mid';
+  }
+  function renderWeek() {
+    const el = $('weekChart');
+    el.replaceChildren();
+    el.style.setProperty('--count', Math.max(1, weekDays.length));
+    const vals = weekDays.map(x => x.avg).filter(Number.isFinite), lo = Math.min(0, ...vals), hi = Math.max(...vals), span = hi - lo || 1, bounds = levels(vals);
+    weekDays.forEach(d => {
+      const c = document.createElement('div'); c.className = 'day';
+      if (Number.isFinite(d.avg)) {
+        const value = document.createElement('span'); value.className = 'bar-value'; value.textContent = fmt(d.avg);
+        const bar = document.createElement('span');
+        bar.className = `bar ${priceClass(d.avg, bounds)}${d.key === key() ? ' today current-bar' : ''}`;
+        bar.style.height = `${Math.max(3, 5 + ((d.avg - lo) / span) * 90)}%`;
+        bar.title = `${d.key}: ${fmtPrice(d.avg)} · ${d.count} intervall`;
+        c.append(value, bar);
+      } else {
+        const na = document.createElement('span'); na.className = 'muted'; na.textContent = '—'; c.append(na);
+      }
+      const label = document.createElement('span'); label.className = 'bar-label'; label.textContent = d.key.slice(8) + '.' + d.key.slice(5, 7); c.append(label);
+      el.append(c);
+    });
+    $('weekStatus').textContent = `${weekDays.filter(x => Number.isFinite(x.avg)).length} av ${weekDays.length} dagar har prisdata. Färger visar relativ prisnivå inom veckan.`;
+  }
+  function findWindows() {
+    const duration = Number($('duration').value), endLength = duration * 3600000, now = Date.now(), ps = plannerPrices.filter(p => p.end > now).sort((a, b) => a.start - b.start), out = [];
+    for (let i = 0; i < ps.length; i++) {
+      const start = Math.max(now, ps[i].start), end = start + endLength;
+      let cursor = start, total = 0, covered = 0, ok = true;
+      for (let j = i; j < ps.length && cursor < end; j++) {
+        const p = ps[j];
+        if (p.start > cursor + 1000) { ok = false; break; }
+        if (p.end <= cursor) continue;
+        const a = Math.max(cursor, p.start), z = Math.min(end, p.end);
+        if (z > a) {
+          const h = (z - a) / 3600000;
+          total += p.value * h;
+          covered += h;
+          cursor = z;
+        }
+      }
+      if (ok && covered >= duration - 1e-6 && cursor >= end - 1000 && !out.some(x => Math.abs(x.start - start) < 60000)) {
+        out.push({ start, end, avg: total / duration });
+      }
+    }
+    return out.sort((a, b) => a.avg - b.avg).slice(0, Number($('topCount').value));
+  }
+  function renderPlanner() {
+    const wins = findWindows(), duration = Number($('duration').value), power = Number($('power').value);
+    if (!wins.length) {
+      $('bestWindowTime').textContent = 'Inga tillgängliga prisfönster';
+      $('bestWindowDetail').textContent = 'Morgondagens priser kan saknas innan de publiceras. Försök igen senare.';
+      $('otherWindows').replaceChildren();
+      $('plannerStatus').textContent = 'Planen kräver sammanhängande prisdata under hela körtiden.';
+      return;
+    }
+    const bounds = levels(plannerPrices.map(x => x.value)), best = wins[0], label = w => `${tm(w.start, true)}–${tm(w.end, true)}`;
+    $('bestWindowTime').textContent = label(best);
+    $('bestWindowDetail').textContent = `${fmtPrice(best.avg)}${Number.isFinite(power) && power > 0 ? ` · cirka ${fmt(best.avg * power * duration)} kr för ${fmt(power)} kW i ${duration} h` : ''} · spotpris.`;
+    const list = $('otherWindows');
+    list.replaceChildren();
+    wins.slice(1).forEach((w, i) => {
+      const box = document.createElement('div');
+      box.className = `recommendation-item ${priceClass(w.avg, bounds)} ${i === 0 ? 'best' : ''}`;
+      const strong = document.createElement('strong');
+      strong.textContent = `${i + 2}. ${label(w)}`;
+      const detail = document.createElement('span');
+      detail.textContent = `${fmtPrice(w.avg)}${power > 0 ? ` · ca ${fmt(w.avg * power * duration)} kr` : ''}`;
+      box.append(strong, detail);
+      list.append(box);
+    });
+    $('plannerStatus').textContent = `Visar ${wins.length} billigaste sammanhängande fönster. Grönt = lågpris, gult = mellanpris, rött = högpris.`;
+  }
+  function renderToday() {
+    if (!todayPrices.length) return;
+    const now = Date.now(), ps = [...todayPrices].sort((a, b) => a.start - b.start), current = ps.find(p => p.start <= now && now < p.end), min = ps.reduce((a, b) => a.value < b.value ? a : b), max = ps.reduce((a, b) => a.value > b.value ? a : b), avg = ps.reduce((s, p) => s + p.value, 0) / ps.length, bounds = levels(ps.map(p => p.value));
+    $('currentPrice').textContent = current ? fmtPrice(current.value) : 'Pris saknas just nu';
+    $('currentPrice').classList.toggle('negative', !!current && current.value < 0);
+    $('currentInterval').textContent = current ? `Gäller ${tm(current.start)}–${tm(current.end)}` : 'Inget aktuellt intervall';
+    $('countdown').textContent = current ? `Nytt kvart om ${Math.max(0, Math.ceil((current.end - now) / 60000))} min` : '';
+    $('averagePrice').textContent = fmtPrice(avg);
+    $('minPrice').textContent = fmtPrice(min.value);
+    $('minInterval').textContent = tm(min.start);
+    $('maxPrice').textContent = fmtPrice(max.value);
+    $('maxInterval').textContent = tm(max.start);
+    const currentUsageValue = current ? usage[String(current.start)] : null;
+    $('currentCost').textContent = current && Number.isFinite(currentUsageValue) ? `${fmt(currentUsageValue * current.value)} kr` : '—';
+    $('currentUsageNote').textContent = current && Number.isFinite(currentUsageValue) ? `${fmt(currentUsageValue)} kWh × ${fmtPrice(current.value)} · spotkostnad` : 'Mätvärde saknas för aktuellt kvart.';
+    $('usageSummary').textContent = Object.keys(usage).length ? `${Object.keys(usage).length} kvart` : 'Saknas';
+    const body = $('priceRows'); body.replaceChildren();
+    ps.forEach(p => {
+      const tr = document.createElement('tr');
+      const isNow = current && current.start === p.start;
+      const kwh = usage[String(p.start)];
+      const cls = priceClass(p.value, bounds);
+      if (isNow) tr.className = 'current';
+      const time = document.createElement('td'); time.textContent = `${tm(p.start)}–${tm(p.end)}`;
+      const sek = document.createElement('td'); sek.textContent = fmt(p.value); sek.className = isNow ? 'price-current' : cls;
+      const used = document.createElement('td'); used.textContent = Number.isFinite(kwh) ? fmt(kwh) : '—';
+      const cost = document.createElement('td'); cost.textContent = Number.isFinite(kwh) ? `${fmt(kwh * p.value)} kr` : '—';
+      const level = document.createElement('td');
+      const pill = document.createElement('span');
+      pill.className = `pill ${isNow ? 'current-pill' : cls === 'price-cheap' ? 'cheap' : cls === 'price-expensive' ? 'expensive' : cls === 'price-negative' ? 'cheap' : 'mid'}`;
+      pill.textContent = isNow ? 'Nu' : cls === 'price-cheap' ? 'Billigt' : cls === 'price-expensive' ? 'Dyrt' : cls === 'price-negative' ? 'Negativt' : 'Mellan';
+      level.append(pill);
+      tr.append(time, sek, used, cost, level);
+      body.append(tr);
+    });
+  }
+  async function loadPrices() {
+    if (busy) return;
+    busy = true;
+    $('refreshPrices').disabled = true;
+    $('priceStatus').textContent = 'Hämtar SE3-priser…';
+    try {
+      const today = key(), days = Array.from({ length: 7 }, (_, i) => shift(today, i - 6));
+      const result = await Promise.all(days.map(async k => { try { return [k, await getDay(k)]; } catch { return [k, []]; } }));
+      weekDays = result.map(([k, ps]) => ({ key: k, count: ps.length, avg: ps.length ? ps.reduce((s, p) => s + p.value, 0) / ps.length : NaN }));
+      todayPrices = result.find(([k]) => k === today)?.[1] ?? [];
+      let tomorrow = [];
+      try { tomorrow = await getDay(shift(today, 1)); } catch {}
+      plannerPrices = [...todayPrices, ...tomorrow].sort((a, b) => a.start - b.start);
+      renderWeek();
+      renderToday();
+      renderPlanner();
+      $('priceDate').textContent = `Priser för ${today} · SE3`;
+      $('priceStatus').textContent = `${todayPrices.length} intervall idag${tomorrow.length ? ` och ${tomorrow.length} imorgon` : ''}. Senast uppdaterad ${tm(Date.now())}.`;
+    } catch (e) {
+      $('priceStatus').textContent = `Kunde inte hämta alla priser: ${e.message}`;
+      if (!todayPrices.length) $('currentPrice').textContent = 'Ej tillgängligt';
+    } finally {
+      busy = false;
+      $('refreshPrices').disabled = false;
+    }
+  }
+  function parseUsage(rows) {
+    if (!Array.isArray(rows)) throw Error('Förväntade en lista med mätvärden.');
+    const out = [];
+    rows.forEach(r => {
+      const stamp = r?.timestamp ?? r?.time_start ?? r?.time;
+      const raw = r?.kWh ?? r?.kwh ?? r?.usage_kWh ?? r?.consumption;
+      const ms = Date.parse(stamp), v = Number(String(raw ?? '').replace(',', '.'));
+      if (Number.isFinite(ms) && Number.isFinite(v) && v >= 0) out.push([String(ms), v]);
+    });
+    if (!out.length) throw Error('Inga giltiga mätvärden. Använd timestamp och kWh med ISO-tidsstämpel inklusive tidszon.');
+    return out;
+  }
+  function parseCsv(text) {
+    const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(x => x.trim());
+    if (lines.length < 2) throw Error('CSV-filen saknar mätvärden.');
+    const sep = lines[0].includes(';') ? ';' : ',';
+    const heads = lines[0].split(sep).map(x => x.trim().toLowerCase().replace(/^"|"$/g, ''));
+    const ti = heads.indexOf('timestamp'), ki = heads.indexOf('kwh');
+    if (ti < 0 || ki < 0) throw Error('CSV-rubriker ska vara timestamp;kWh.');
+    return parseUsage(lines.slice(1).map(line => {
+      const c = line.split(sep).map(x => x.trim().replace(/^"|"$/g, ''));
+      return { timestamp: c[ti], kWh: c[ki] };
+    }));
+  }
+  $('usageFile').addEventListener('change', async e => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    try {
+      const text = await f.text();
+      const rows = f.name.toLowerCase().endsWith('.csv') ? parseCsv(text) : parseUsage(JSON.parse(text));
+      rows.forEach(([k, v]) => usage[k] = v);
+      localStorage.setItem(UK, JSON.stringify(usage));
+      $('usageStatus').textContent = `Importerade ${rows.length} kvartsvärden från ${f.name}.`;
+      renderToday();
+    } catch (err) {
+      $('usageStatus').textContent = `Importfel: ${err.message}`;
+    }
+    e.target.value = '';
+  });
+  $('downloadTemplate').addEventListener('click', () => {
+    const blob = new Blob(['timestamp;kWh\r\n2026-11-10T12:00:00+01:00;0,42\r\n2026-11-10T12:15:00+01:00;0,38\r\n'], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = 'elkoll-forbrukning-mall.csv'; a.click(); URL.revokeObjectURL(url);
+  });
+  $('clearUsage').addEventListener('click', () => {
+    usage = {};
+    localStorage.removeItem(UK);
+    $('usageStatus').textContent = 'Förbrukningsdata rensad.';
+    renderToday();
+  });
+  function costOf(r) { return r.cost ?? r.usage * RATE; }
+  function rowsFor(y) { return monthly.filter(r => r.year === y).sort((a, b) => a.month - b.month); }
+  function renderMonthly() {
+    const s = $('yearSelect'), ys = [...new Set(monthly.map(r => r.year))].sort((a, b) => b - a), old = Number(s.value);
+    s.replaceChildren(...ys.map(y => { const o = document.createElement('option'); o.value = String(y); o.textContent = String(y); return o; }));
+    if (!ys.length) {
+      $('yearUsage').textContent = '—';
+      $('yearCost').textContent = '—';
+      $('savings').textContent = '—';
+      $('dataRows').replaceChildren();
+      return;
+    }
+    const y = ys.includes(old) ? old : ys[0], data = rowsFor(y), prev = rowsFor(y - 1);
+    s.value = String(y);
+    $('yearUsage').textContent = fmt(data.reduce((a, r) => a + r.usage, 0));
+    $('yearCost').textContent = `${fmt(data.reduce((a, r) => a + costOf(r), 0))} kr`;
+    if (prev.length) {
+      const diff = prev.reduce((a, r) => a + costOf(r), 0) - data.reduce((a, r) => a + costOf(r), 0);
+      $('savings').textContent = `${diff >= 0 ? '+' : '−'}${fmt(Math.abs(diff))} kr`;
+      $('savingsNote').textContent = `${diff >= 0 ? 'lägre' : 'högre'} kostnad än ${y - 1}`;
+    }
+    $('dataRows').innerHTML = data.map(r => `<tr><td>${MONTHS[r.month - 1]} ${r.year}</td><td>${fmt(r.usage)}</td><td>${fmt(costOf(r))}</td></tr>`).join('');
+  }
+  $('jsonFile').addEventListener('change', async e => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    try {
+      const x = JSON.parse(await f.text()), rows = Array.isArray(x) ? x : x.data;
+      if (!Array.isArray(rows)) throw Error('JSON behöver innehålla månadsrader.');
+      monthly = rows.map(r => ({ year: Number(r.year), month: Number(r.month), usage: Number(r.usage ?? r.kWh ?? r.kwh ?? r.consumption), cost: r.cost == null && r.costSEK == null ? null : Number(r.cost ?? r.costSEK) })).filter(r => Number.isInteger(r.year) && Number.isInteger(r.month) && r.month >= 1 && r.month <= 12 && Number.isFinite(r.usage) && r.usage >= 0);
+      if (!monthly.length) throw Error('Inga giltiga månadsrader.');
+      localStorage.setItem(MK, JSON.stringify(monthly));
+      renderMonthly();
+      $('monthlyStatus').textContent = `Importerade ${monthly.length} rader.`;
+    } catch (err) { $('monthlyStatus').textContent = `Importfel: ${err.message}`; }
+    e.target.value = '';
+  });
+  $('yearSelect').addEventListener('change', renderMonthly);
+  $('duration').addEventListener('change', renderPlanner);
+  $('topCount').addEventListener('change', renderPlanner);
+  $('power').addEventListener('input', renderPlanner);
+  $('updatePlanner').addEventListener('click', renderPlanner);
+  $('refreshPrices').addEventListener('click', loadPrices);
+  $('exportBtn').addEventListener('click', () => {
+    const y = Number($('yearSelect').value), data = rowsFor(y);
+    if (!data.length) { $('monthlyStatus').textContent = 'Inget att exportera.'; return; }
+    const csv = [['År', 'Månad', 'Förbrukning_kWh', 'Kostnad_kr'], ...data.map(r => [r.year, MONTHS[r.month - 1], r.usage, costOf(r)])].map(r => r.join(';')).join('\r\n');
+    const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })), a = document.createElement('a');
+    a.href = url; a.download = `elkoll-${y}.csv`; a.click(); URL.revokeObjectURL(url);
+    $('monthlyStatus').textContent = `CSV-fil för ${y} exporterad.`;
+  });
+  renderMonthly();
+  loadPrices();
+  timer = setInterval(() => { if (document.visibilityState === 'visible') loadPrices(); }, 900000);
+  clock = setInterval(() => { renderToday(); renderPlanner(); }, 15000);
+  window.addEventListener('focus', () => { if (document.visibilityState === 'visible') loadPrices(); });
+  window.addEventListener('beforeunload', () => { clearInterval(timer); clearInterval(clock); }, { once: true });
 })();
-</script></body></html>
+</script>
+</body>
+</html>
