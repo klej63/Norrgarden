@@ -16,6 +16,7 @@
       --blue: #2563eb;
       --green: #059669;
       --red: #dc2626;
+      --amber: #d97706;
     }
     * { box-sizing: border-box; }
     body { margin: 0; padding: 22px; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, sans-serif; }
@@ -30,21 +31,53 @@
     button:disabled { opacity: .6; cursor: wait; }
     input[type="file"] { display: none; }
     select { padding: 9px; border: 1px solid var(--border); border-radius: 8px; background: white; font: inherit; }
-    #priceStatus { flex-basis: 100%; }
+    #priceStatus { flex-basis: 100%; margin: 0; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin: 14px 0; }
     .metric { font-size: 1.8rem; font-weight: 700; }
     .blue { color: var(--blue); }
     .green { color: var(--green); }
-    .table-wrap { overflow: auto; max-height: 65vh; }
+    .negative { color: var(--red); }
+    .section-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+    .section-heading p { margin: 2px 0 0; }
+    .live-badge { display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 999px; background: #dcfce7; color: #166534; font-size: .85rem; font-weight: 700; }
+    .live-dot { width: 9px; height: 9px; border-radius: 50%; background: #16a34a; box-shadow: 0 0 0 4px #bbf7d0; }
+    .price-hero { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(220px, 1fr); gap: 18px; align-items: stretch; margin: 18px 0; }
+    .hero-price { padding: 20px; border-radius: 12px; background: linear-gradient(135deg, #eff6ff, #f8fafc); border: 1px solid #dbeafe; }
+    .hero-price .metric { font-size: clamp(2.2rem, 7vw, 3.4rem); line-height: 1.15; margin: 4px 0; letter-spacing: -.04em; }
+    .hero-price .subline { color: var(--muted); }
+    .hero-side { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+    .mini-stat { padding: 14px; border: 1px solid var(--border); border-radius: 12px; }
+    .mini-stat .metric { font-size: 1.25rem; }
+    .price-chart-wrap { padding: 16px 14px 10px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+    .chart-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .chart-heading h3 { margin: 0; font-size: 1rem; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: .82rem; }
+    .legend-mark { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; background: #93c5fd; }
+    .legend-mark.current { background: var(--blue); }
+    .chart { display: grid; grid-template-columns: repeat(var(--bar-count), minmax(2px, 1fr)); align-items: end; gap: 2px; height: 150px; margin-top: 18px; border-bottom: 1px solid var(--border); background: repeating-linear-gradient(to bottom, transparent 0, transparent 36px, #f1f5f9 37px); }
+    .bar { position: relative; min-height: 3px; border-radius: 3px 3px 0 0; background: #93c5fd; transition: height .25s ease, background-color .25s ease; }
+    .bar.current { background: var(--blue); box-shadow: 0 0 0 1px #1d4ed8; }
+    .bar.cheapest { background: #34d399; }
+    .bar.expensive { background: #fb923c; }
+    .bar.current.cheapest, .bar.current.expensive { background: var(--blue); }
+    .chart-axis { display: flex; justify-content: space-between; color: var(--muted); font-size: .75rem; padding-top: 5px; }
+    .price-table-wrap { overflow: auto; max-height: 55vh; margin-top: 18px; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
     th:first-child, td:first-child { text-align: left; }
     th { position: sticky; top: 0; background: var(--card); color: var(--muted); font-weight: 600; }
     tr.current { background: #eff6ff; font-weight: 700; }
     .current-label { color: var(--blue); }
-    .section-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
-    .negative { color: var(--red); }
-    @media (max-width: 700px) { body { padding: 14px; } .toolbar, .card { padding: 14px; } }
+    .price-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-top: 12px; }
+    @media (max-width: 700px) {
+      body { padding: 14px; }
+      .toolbar, .card { padding: 14px; }
+      .price-hero { grid-template-columns: 1fr; }
+      .hero-side { grid-template-columns: 1fr 1fr; }
+      .chart { height: 120px; gap: 1px; }
+      .price-table-wrap { max-height: 50vh; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
   </style>
 </head>
 <body>
@@ -55,25 +88,53 @@
   <section class="card" aria-labelledby="pricesHeading">
     <div class="section-heading">
       <div>
-        <h2 id="pricesHeading">Dagens SE3-kvartspriser</h2>
+        <h2 id="pricesHeading">Dagens elpris · SE3</h2>
         <p id="priceDate" class="muted">Hämtar dagens priser…</p>
       </div>
-      <button id="refreshPrices" type="button">Uppdatera priser</button>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span class="live-badge"><span class="live-dot" aria-hidden="true"></span>LIVE</span>
+        <button id="refreshPrices" type="button">Uppdatera</button>
+      </div>
     </div>
-    <div class="grid" aria-label="Prissammanfattning">
-      <article><div class="muted">Aktuellt kvart</div><div id="currentPrice" class="metric blue">—</div><div id="currentInterval" class="muted">—</div></article>
-      <article><div class="muted">Dagens snitt</div><div id="averagePrice" class="metric">—</div><div>kr/kWh, spotpris</div></article>
-      <article><div class="muted">Lägsta pris</div><div id="minPrice" class="metric green">—</div><div id="minInterval" class="muted">—</div></article>
-      <article><div class="muted">Högsta pris</div><div id="maxPrice" class="metric">—</div><div id="maxInterval" class="muted">—</div></article>
+
+    <div class="price-hero">
+      <article class="hero-price" aria-live="polite">
+        <div class="muted">Spotpris just nu</div>
+        <div id="currentPrice" class="metric blue">—</div>
+        <div id="currentInterval" class="subline">Väntar på prisdata</div>
+        <div id="countdown" class="subline">—</div>
+      </article>
+      <div class="hero-side">
+        <article class="mini-stat"><div class="muted">Dagens snitt</div><div id="averagePrice" class="metric">—</div></article>
+        <article class="mini-stat"><div class="muted">Nästa billigaste kvart</div><div id="nextCheapPrice" class="metric green">—</div><div id="nextCheapTime" class="muted">—</div></article>
+        <article class="mini-stat"><div class="muted">Lägsta idag</div><div id="minPrice" class="metric green">—</div><div id="minInterval" class="muted">—</div></article>
+        <article class="mini-stat"><div class="muted">Högsta idag</div><div id="maxPrice" class="metric">—</div><div id="maxInterval" class="muted">—</div></article>
+      </div>
     </div>
-    <p id="priceStatus" class="muted" role="status" aria-live="polite">Priser hämtas automatiskt när sidan öppnas och uppdateras var 15:e minut.</p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Tid (svensk tid)</th><th>Pris (kr/kWh)</th><th>Pris (öre/kWh)</th><th>Status</th></tr></thead>
-        <tbody id="priceRows"><tr><td colspan="4" class="muted">Väntar på prisdata…</td></tr></tbody>
-      </table>
+
+    <div class="price-chart-wrap">
+      <div class="chart-heading">
+        <h3>Dagens prisutveckling</h3>
+        <div class="chart-legend"><span><i class="legend-mark current"></i>Nu</span><span><i class="legend-mark"></i>Övriga kvart</span></div>
+      </div>
+      <div id="priceChart" class="chart" role="img" aria-label="Diagram över dagens kvartspriser" style="--bar-count:96"></div>
+      <div class="chart-axis" aria-hidden="true"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
     </div>
-    <small>Spotpris från <a href="https://www.elprisetjustnu.se/elpris-api" target="_blank" rel="noopener noreferrer">elprisetjustnu.se</a>. Eventuella elskatt, moms, nätavgifter och elhandlarpåslag kan tillkomma.</small>
+
+    <div class="price-footer">
+      <p id="priceStatus" class="muted" role="status" aria-live="polite">Hämtar priser automatiskt vid sidöppning och uppdaterar var 15:e minut.</p>
+      <small>Spotpris · kr/kWh</small>
+    </div>
+    <details>
+      <summary>Visa alla kvartspriser</summary>
+      <div class="price-table-wrap">
+        <table>
+          <thead><tr><th>Tid (svensk tid)</th><th>Pris (kr/kWh)</th><th>Pris (öre/kWh)</th><th>Status</th></tr></thead>
+          <tbody id="priceRows"><tr><td colspan="4" class="muted">Väntar på prisdata…</td></tr></tbody>
+        </table>
+      </div>
+    </details>
+    <small>Spotpris från <a href="https://www.elprisetjustnu.se/elpris-api" target="_blank" rel="noopener noreferrer">elprisetjustnu.se</a>. Elskatt, moms, nätavgifter och elhandlarpåslag kan tillkomma.</small>
   </section>
 
   <section class="toolbar" aria-label="Månadsdata">
@@ -93,11 +154,8 @@
 
   <section class="card">
     <h2>Månadsdata</h2>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Månad</th><th>Förbrukning (kWh)</th><th>Kostnad (kr)</th></tr></thead>
-        <tbody id="dataRows"></tbody>
-      </table>
+    <div class="price-table-wrap">
+      <table><thead><tr><th>Månad</th><th>Förbrukning (kWh)</th><th>Kostnad (kr)</th></tr></thead><tbody id="dataRows"></tbody></table>
     </div>
     <p id="dataHint" class="muted">Ingen data ännu. Importera en JSON-fil.</p>
   </section>
@@ -117,6 +175,7 @@
   let records = loadSavedData();
   let prices = [];
   let refreshTimer;
+  let clockTimer;
 
   function loadSavedData() {
     try {
@@ -198,6 +257,33 @@
     return new Intl.DateTimeFormat("sv-SE", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(date);
   }
 
+  function renderPriceChart(sorted, now) {
+    const chart = $("priceChart");
+    chart.replaceChildren();
+    if (!sorted.length) return;
+    const values = sorted.map(price => price.value);
+    const min = Math.min(0, ...values);
+    const max = Math.max(...values);
+    const span = max - min || 1;
+    const current = sorted.find(price => price.start <= now && now < price.end);
+    const cheapest = sorted.reduce((best, item) => item.value < best.value ? item : best);
+    const priciest = sorted.reduce((best, item) => item.value > best.value ? item : best);
+    chart.style.setProperty("--bar-count", String(sorted.length));
+    chart.setAttribute("aria-label", `Dagens ${sorted.length} kvartspriser i SE3. Pris från ${format(min)} till ${format(max)} kronor per kilowattimme.`);
+    for (const price of sorted) {
+      const bar = document.createElement("span");
+      const height = 8 + ((price.value - min) / span) * 92;
+      bar.className = "bar";
+      if (current && price.start === current.start) bar.classList.add("current");
+      if (price.start === cheapest.start) bar.classList.add("cheapest");
+      if (price.start === priciest.start) bar.classList.add("expensive");
+      bar.style.height = `${height}%`;
+      bar.title = `${stockholmTime(new Date(price.start))}–${stockholmTime(new Date(price.end))}: ${formatPrice(price.value)}`;
+      bar.setAttribute("aria-hidden", "true");
+      chart.append(bar);
+    }
+  }
+
   function renderPrices() {
     const now = Date.now();
     const tbody = $("priceRows");
@@ -208,16 +294,22 @@
     const average = sorted.reduce((sum, price) => sum + price.value, 0) / sorted.length;
     const min = sorted.reduce((best, price) => price.value < best.value ? price : best);
     const max = sorted.reduce((best, price) => price.value > best.value ? price : best);
+    const nextCheap = sorted.find(price => price.start > now);
     $("currentPrice").textContent = current ? formatPrice(current.value) : "—";
-    $("currentInterval").textContent = current ? `${stockholmTime(new Date(current.start))}–${stockholmTime(new Date(current.end))}` : "Inget aktuellt intervall";
+    $("currentPrice").classList.toggle("negative", Boolean(current && current.value < 0));
+    $("currentInterval").textContent = current ? `Gäller ${stockholmTime(new Date(current.start))}–${stockholmTime(new Date(current.end))}` : "Inget aktuellt prisintervall";
     $("averagePrice").textContent = formatPrice(average);
     $("minPrice").textContent = formatPrice(min.value);
     $("minInterval").textContent = `${stockholmTime(new Date(min.start))}–${stockholmTime(new Date(min.end))}`;
     $("maxPrice").textContent = formatPrice(max.value);
     $("maxInterval").textContent = `${stockholmTime(new Date(max.start))}–${stockholmTime(new Date(max.end))}`;
+    $("nextCheapPrice").textContent = nextCheap ? formatPrice(nextCheap.value) : "—";
+    $("nextCheapTime").textContent = nextCheap ? `${stockholmTime(new Date(nextCheap.start))}–${stockholmTime(new Date(nextCheap.end))}` : "Inga fler kvart idag";
+    $("countdown").textContent = current ? `Nästa prisbyte om ${Math.max(0, Math.ceil((current.end - now) / 60000))} min` : "";
+    renderPriceChart(sorted, now);
     for (const price of sorted) {
       const row = document.createElement("tr");
-      if (price.start <= now && now < price.end) row.className = "current";
+      if (current && price.start === current.start) row.className = "current";
       const timeCell = document.createElement("td");
       timeCell.textContent = `${stockholmTime(new Date(price.start))}–${stockholmTime(new Date(price.end))}`;
       const sekCell = document.createElement("td");
@@ -226,7 +318,7 @@
       const oreCell = document.createElement("td");
       oreCell.textContent = format(price.value * 100);
       const statusCell = document.createElement("td");
-      statusCell.textContent = price.start <= now && now < price.end ? "Nu" : "";
+      statusCell.textContent = current && price.start === current.start ? "Nu" : "";
       statusCell.className = "current-label";
       row.append(timeCell, sekCell, oreCell, statusCell);
       tbody.append(row);
@@ -244,15 +336,12 @@
       if (!response.ok) throw new Error(`Pristjänsten svarade med HTTP ${response.status}.`);
       const data = await response.json();
       if (!Array.isArray(data) || data.length === 0) throw new Error("Tjänsten returnerade inga priser för idag.");
-      const parsed = data.map(item => ({
-        value: Number(item.SEK_per_kWh),
-        start: Date.parse(item.time_start),
-        end: Date.parse(item.time_end)
-      })).filter(price => Number.isFinite(price.value) && Number.isFinite(price.start) && Number.isFinite(price.end) && price.end > price.start);
+      const parsed = data.map(item => ({ value: Number(item.SEK_per_kWh), start: Date.parse(item.time_start), end: Date.parse(item.time_end) }))
+        .filter(price => Number.isFinite(price.value) && Number.isFinite(price.start) && Number.isFinite(price.end) && price.end > price.start);
       if (!parsed.length) throw new Error("Prisdata saknar giltiga kvartstider eller priser.");
       prices = parsed;
       renderPrices();
-      $("priceStatus").textContent = `${prices.length} prisintervall hämtade. Senast uppdaterad ${new Intl.DateTimeFormat("sv-SE", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date())}. Automatisk uppdatering var 15:e minut.`;
+      $("priceStatus").textContent = `${prices.length} prisintervall hämtade. Senast uppdaterad ${new Intl.DateTimeFormat("sv-SE", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date())}.`;
     } catch (error) {
       $("priceStatus").textContent = `Kunde inte hämta SE3-priser: ${error.message} Kontrollera internetanslutningen och försök igen.`;
       if (!prices.length) {
@@ -300,12 +389,17 @@
   $("refreshPrices").addEventListener("click", fetchSE3Prices);
   renderMonthly();
   fetchSE3Prices();
-  refreshTimer = window.setInterval(fetchSE3Prices, 15 * 60 * 1000);
-  window.setInterval(renderPrices, 60 * 1000);
+  refreshTimer = window.setInterval(() => {
+    if (document.visibilityState === "visible") fetchSE3Prices();
+  }, 15 * 60 * 1000);
+  clockTimer = window.setInterval(renderPrices, 15 * 1000);
   window.addEventListener("focus", () => {
     if (document.visibilityState === "visible") fetchSE3Prices();
   });
-  window.addEventListener("beforeunload", () => window.clearInterval(refreshTimer), { once: true });
+  window.addEventListener("beforeunload", () => {
+    window.clearInterval(refreshTimer);
+    window.clearInterval(clockTimer);
+  }, { once: true });
 })();
 </script>
 </body>
