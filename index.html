@@ -3,9 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Elkoll – energidashboard</title>
+  <meta name="description" content="Elkoll visar aktuella SE3-kvartspriser och din månadsförbrukning.">
+  <title>Elkoll – SE3 och energiförbrukning</title>
   <style>
     :root {
+      color-scheme: light;
       --bg: #f4f7fb;
       --card: #fff;
       --text: #172033;
@@ -13,538 +15,297 @@
       --border: #e2e8f0;
       --blue: #2563eb;
       --green: #059669;
+      --red: #dc2626;
     }
-
     * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      padding: 22px;
-      background: var(--bg);
-      color: var(--text);
-      font: 16px/1.5 system-ui, sans-serif;
-    }
-
+    body { margin: 0; padding: 22px; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, sans-serif; }
     main { max-width: 1050px; margin: auto; }
     h1 { margin: 0; }
     h2 { margin: 0 0 12px; font-size: 1.15rem; }
     .muted, small { color: var(--muted); }
-
-    .toolbar, .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 18px;
-    }
-
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 10px;
-      margin: 18px 0;
-    }
-
-    button, .upload {
-      display: inline-block;
-      border: 0;
-      border-radius: 8px;
-      padding: 10px 14px;
-      background: var(--blue);
-      color: white;
-      font: inherit;
-      cursor: pointer;
-    }
-
+    .toolbar, .card { padding: 18px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 18px 0; }
+    button, .upload { display: inline-block; border: 0; border-radius: 8px; padding: 10px 14px; background: var(--blue); color: #fff; font: inherit; cursor: pointer; }
     button.secondary { background: #e8eefc; color: #1e40af; }
     button:disabled { opacity: .6; cursor: wait; }
     input[type="file"] { display: none; }
-
-    select {
-      padding: 9px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: white;
-      font: inherit;
-    }
-
-    #status { flex-basis: 100%; }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 14px;
-      margin: 14px 0;
-    }
-
+    select { padding: 9px; border: 1px solid var(--border); border-radius: 8px; background: white; font: inherit; }
+    #priceStatus { flex-basis: 100%; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin: 14px 0; }
     .metric { font-size: 1.8rem; font-weight: 700; }
     .blue { color: var(--blue); }
     .green { color: var(--green); }
-
-    .charts {
-      display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
-      gap: 14px;
-      margin: 14px 0;
-    }
-
-    canvas { display: block; width: 100%; height: 260px; }
-    .table-wrap { overflow-x: auto; }
+    .table-wrap { overflow: auto; max-height: 65vh; }
     table { width: 100%; border-collapse: collapse; }
-
-    th, td {
-      padding: 10px;
-      border-bottom: 1px solid var(--border);
-      text-align: right;
-      white-space: nowrap;
-    }
-
+    th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
     th:first-child, td:first-child { text-align: left; }
-    th { color: var(--muted); font-weight: 600; }
-
-    @media (max-width: 700px) {
-      body { padding: 14px; }
-      .charts { grid-template-columns: 1fr; }
-      canvas { height: 230px; }
-    }
+    th { position: sticky; top: 0; background: var(--card); color: var(--muted); font-weight: 600; }
+    tr.current { background: #eff6ff; font-weight: 700; }
+    .current-label { color: var(--blue); }
+    .section-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .negative { color: var(--red); }
+    @media (max-width: 700px) { body { padding: 14px; } .toolbar, .card { padding: 14px; } }
   </style>
 </head>
 <body>
 <main>
   <h1>⚡ Elkoll</h1>
-  <p class="muted">Importera månadsförbrukning, följ kostnader och exportera data.</p>
+  <p class="muted">Kvartspriser för elområde SE3, hämtade direkt från elprisetjustnu.se, och din månadsförbrukning.</p>
 
-  <section class="toolbar" aria-label="Datahantering">
-    <label class="upload" for="jsonFile">Importera JSON</label>
+  <section class="card" aria-labelledby="pricesHeading">
+    <div class="section-heading">
+      <div>
+        <h2 id="pricesHeading">Dagens SE3-kvartspriser</h2>
+        <p id="priceDate" class="muted">Hämtar dagens priser…</p>
+      </div>
+      <button id="refreshPrices" type="button">Uppdatera priser</button>
+    </div>
+    <div class="grid" aria-label="Prissammanfattning">
+      <article><div class="muted">Aktuellt kvart</div><div id="currentPrice" class="metric blue">—</div><div id="currentInterval" class="muted">—</div></article>
+      <article><div class="muted">Dagens snitt</div><div id="averagePrice" class="metric">—</div><div>kr/kWh, spotpris</div></article>
+      <article><div class="muted">Lägsta pris</div><div id="minPrice" class="metric green">—</div><div id="minInterval" class="muted">—</div></article>
+      <article><div class="muted">Högsta pris</div><div id="maxPrice" class="metric">—</div><div id="maxInterval" class="muted">—</div></article>
+    </div>
+    <p id="priceStatus" class="muted" role="status" aria-live="polite">Priser hämtas automatiskt när sidan öppnas och uppdateras var 15:e minut.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tid (svensk tid)</th><th>Pris (kr/kWh)</th><th>Pris (öre/kWh)</th><th>Status</th></tr></thead>
+        <tbody id="priceRows"><tr><td colspan="4" class="muted">Väntar på prisdata…</td></tr></tbody>
+      </table>
+    </div>
+    <small>Spotpris från <a href="https://www.elprisetjustnu.se/elpris-api" target="_blank" rel="noopener noreferrer">elprisetjustnu.se</a>. Eventuella elskatt, moms, nätavgifter och elhandlarpåslag kan tillkomma.</small>
+  </section>
+
+  <section class="toolbar" aria-label="Månadsdata">
+    <label class="upload" for="jsonFile">Importera månadsdata (JSON)</label>
     <input id="jsonFile" type="file" accept=".json,application/json">
-
     <label for="yearSelect">År:</label>
     <select id="yearSelect" aria-label="Välj år"></select>
-
     <button id="exportBtn" class="secondary" type="button">Exportera CSV</button>
-    <button id="priceBtn" class="secondary" type="button">Hämta dagens SE3-pris</button>
-
-    <div id="status" class="muted" role="status" aria-live="polite">
-      Importera en JSON-fil för att visa dina data.
-    </div>
+    <span id="monthlyStatus" class="muted" role="status" aria-live="polite">Importera en JSON-fil för att visa månadsdata.</span>
   </section>
 
-  <section class="grid" aria-label="Sammanfattning">
-    <article class="card">
-      <h2>Årsförbrukning</h2>
-      <div id="yearUsage" class="metric blue">—</div>
-      <div>kWh</div>
-    </article>
-    <article class="card">
-      <h2>Uppskattad årskostnad</h2>
-      <div id="yearCost" class="metric green">—</div>
-      <div>kr</div>
-    </article>
-    <article class="card">
-      <h2>Skillnad mot föregående år</h2>
-      <div id="savings" class="metric">—</div>
-      <div id="savingsNote" class="muted">Importera data för två år för jämförelse.</div>
-    </article>
-    <article class="card">
-      <h2>Dagens SE3-spotpris</h2>
-      <div id="spotPrice" class="metric blue">—</div>
-      <div id="spotNote" class="muted">kr/kWh, före eventuella påslag</div>
-    </article>
-  </section>
-
-  <section class="charts">
-    <article class="card">
-      <h2>Månadsförbrukning</h2>
-      <canvas id="usageChart" aria-label="Diagram över månadsförbrukning"></canvas>
-    </article>
-    <article class="card">
-      <h2>Kostnad per månad</h2>
-      <canvas id="costChart" aria-label="Cirkeldiagram över månadskostnader"></canvas>
-      <small>Fördelning av kostnaden för valt år.</small>
-    </article>
+  <section class="grid" aria-label="Sammanfattning av månadsdata">
+    <article class="card"><h2>Årsförbrukning</h2><div id="yearUsage" class="metric blue">—</div><div>kWh</div></article>
+    <article class="card"><h2>Uppskattad årskostnad</h2><div id="yearCost" class="metric green">—</div><div>kr</div></article>
+    <article class="card"><h2>Skillnad mot föregående år</h2><div id="savings" class="metric">—</div><div id="savingsNote" class="muted">Importera data för två år för jämförelse.</div></article>
   </section>
 
   <section class="card">
     <h2>Månadsdata</h2>
     <div class="table-wrap">
       <table>
-        <thead>
-          <tr>
-            <th>Månad</th>
-            <th>Förbrukning (kWh)</th>
-            <th>Kostnad (kr)</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Månad</th><th>Förbrukning (kWh)</th><th>Kostnad (kr)</th></tr></thead>
         <tbody id="dataRows"></tbody>
       </table>
     </div>
-    <p id="dataHint" class="muted"></p>
+    <p id="dataHint" class="muted">Ingen data ännu. Importera en JSON-fil.</p>
   </section>
-
-  <p class="muted">
-    Importerad data sparas bara i den här webbläsaren.
-    Kostnad utan ett importerat kostnadsvärde uppskattas med 2,27 kr/kWh.
-  </p>
+  <p class="muted">Importerad månadsdata sparas bara i den här webbläsaren. Kostnad utan importerat kostnadsvärde uppskattas med 2,27 kr/kWh.</p>
 </main>
-
 <script>
 (() => {
   "use strict";
-
-  const STORAGE_KEY = "elkoll-monthly-data-v1";
+  const MONTHLY_STORAGE_KEY = "elkoll-monthly-data-v1";
   const DEFAULT_RATE = 2.27;
-  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun",
-                  "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
-  const COLORS = ["#2563eb", "#059669", "#ea580c", "#7c3aed",
-                  "#0891b2", "#db2777", "#65a30d", "#d97706",
-                  "#4f46e5", "#0f766e", "#be123c", "#475569"];
-
+  const PRICE_AREA = "SE3";
+  const TIME_ZONE = "Europe/Stockholm";
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
   const $ = id => document.getElementById(id);
-  const format = value =>
-    Number(value).toLocaleString("sv-SE", { maximumFractionDigits: 2 });
-
+  const format = value => Number(value).toLocaleString("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+  const formatPrice = value => `${format(value)} kr/kWh`;
   let records = loadSavedData();
+  let prices = [];
+  let refreshTimer;
 
   function loadSavedData() {
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      const saved = JSON.parse(localStorage.getItem(MONTHLY_STORAGE_KEY));
       return Array.isArray(saved) ? saved : [];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   }
 
   function normalizeData(input) {
-    const rows = Array.isArray(input)
-      ? input
-      : input && Array.isArray(input.data)
-        ? input.data
-        : null;
-
-    if (!rows) {
-      throw new Error("JSON-filen måste innehålla en lista med månadsrader.");
-    }
-
+    const rows = Array.isArray(input) ? input : input && Array.isArray(input.data) ? input.data : null;
+    if (!rows) throw new Error("JSON-filen måste innehålla en lista med månadsrader.");
     const validRows = rows.map(row => {
       if (!row || typeof row !== "object") return null;
-
       const year = Number(row.year);
       const month = Number(row.month);
       const usage = Number(row.usage ?? row.kWh ?? row.kwh ?? row.consumption);
       const rawCost = row.cost ?? row.costSEK;
-      const cost = rawCost === undefined || rawCost === null || rawCost === ""
-        ? null
-        : Number(rawCost);
-
-      if (!Number.isInteger(year) ||
-          !Number.isInteger(month) || month < 1 || month > 12 ||
-          !Number.isFinite(usage) || usage < 0 ||
-          (cost !== null && (!Number.isFinite(cost) || cost < 0))) {
-        return null;
-      }
-
+      const cost = rawCost === undefined || rawCost === null || rawCost === "" ? null : Number(rawCost);
+      if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12 || !Number.isFinite(usage) || usage < 0 || (cost !== null && (!Number.isFinite(cost) || cost < 0))) return null;
       return { year, month, usage, cost };
     }).filter(Boolean);
-
-    if (validRows.length === 0) {
-      throw new Error("Inga giltiga rader hittades. Kontrollera år, månad och förbrukning.");
-    }
-
+    if (!validRows.length) throw new Error("Inga giltiga rader hittades. Kontrollera år, månad och förbrukning.");
     return validRows;
   }
 
-  function costOf(row) {
-    return row.cost ?? row.usage * DEFAULT_RATE;
-  }
+  function costOf(row) { return row.cost ?? row.usage * DEFAULT_RATE; }
+  function rowsFor(year) { return records.filter(row => row.year === year).sort((a, b) => a.month - b.month); }
 
-  function rowsFor(year) {
-    return records
-      .filter(row => row.year === year)
-      .sort((a, b) => a.month - b.month);
-  }
-
-  function render() {
+  function renderMonthly() {
     const select = $("yearSelect");
-    const years = [...new Set(records.map(row => row.year))]
-      .sort((a, b) => b - a);
+    const years = [...new Set(records.map(row => row.year))].sort((a, b) => b - a);
     const previousSelection = Number(select.value);
-
-    select.innerHTML = years
-      .map(year => `<option value="${year}">${year}</option>`)
-      .join("");
-
-    if (years.length === 0) {
+    select.replaceChildren(...years.map(year => {
+      const option = document.createElement("option");
+      option.value = String(year);
+      option.textContent = String(year);
+      return option;
+    }));
+    if (!years.length) {
       $("yearUsage").textContent = "—";
       $("yearCost").textContent = "—";
       $("savings").textContent = "—";
       $("savingsNote").textContent = "Importera data för att visa jämförelse.";
-      $("dataRows").innerHTML = "";
+      $("dataRows").replaceChildren();
       $("dataHint").textContent = "Ingen data ännu. Importera en JSON-fil.";
-      drawLine($("usageChart"), []);
-      drawPie($("costChart"), []);
       return;
     }
-
     const year = years.includes(previousSelection) ? previousSelection : years[0];
     select.value = String(year);
-
     const data = rowsFor(year);
     const totalUsage = data.reduce((sum, row) => sum + row.usage, 0);
     const totalCost = data.reduce((sum, row) => sum + costOf(row), 0);
     const previousData = rowsFor(year - 1);
-
     $("yearUsage").textContent = format(totalUsage);
     $("yearCost").textContent = `${format(totalCost)} kr`;
-
-    if (previousData.length > 0) {
-      const previousCost = previousData.reduce((sum, row) => sum + costOf(row), 0);
-      const difference = previousCost - totalCost;
-
-      $("savings").textContent =
-        `${difference >= 0 ? "+" : "−"}${format(Math.abs(difference))} kr`;
-      $("savingsNote").textContent =
-        difference >= 0
-          ? `lägre kostnad än ${year - 1}`
-          : `högre kostnad än ${year - 1}`;
+    if (previousData.length) {
+      const difference = previousData.reduce((sum, row) => sum + costOf(row), 0) - totalCost;
+      $("savings").textContent = `${difference >= 0 ? "+" : "−"}${format(Math.abs(difference))} kr`;
+      $("savingsNote").textContent = `${difference >= 0 ? "lägre" : "högre"} kostnad än ${year - 1}`;
     } else {
       $("savings").textContent = "—";
-      $("savingsNote").textContent =
-        `Importera även data för ${year - 1} för jämförelse.`;
+      $("savingsNote").textContent = `Importera även data för ${year - 1} för jämförelse.`;
     }
-
-    $("dataRows").innerHTML = data.map(row => `
-      <tr>
-        <td>${MONTHS[row.month - 1]} ${row.year}</td>
-        <td>${format(row.usage)}</td>
-        <td>${format(costOf(row))}</td>
-      </tr>
-    `).join("");
-
-    $("dataHint").textContent =
-      `Kostnad utan cost-värde uppskattas med ${format(DEFAULT_RATE)} kr/kWh.`;
-
-    drawLine($("usageChart"), data);
-    drawPie($("costChart"), data);
+    $("dataRows").innerHTML = data.map(row => `<tr><td>${MONTHS[row.month - 1]} ${row.year}</td><td>${format(row.usage)}</td><td>${format(costOf(row))}</td></tr>`).join("");
+    $("dataHint").textContent = `Kostnad utan cost-värde uppskattas med ${format(DEFAULT_RATE)} kr/kWh.`;
   }
 
-  function prepareCanvas(canvas) {
-    const rect = canvas.getBoundingClientRect();
-    const ratio = window.devicePixelRatio || 1;
-
-    canvas.width = Math.max(1, Math.round(rect.width * ratio));
-    canvas.height = Math.max(1, Math.round(rect.height * ratio));
-
-    const context = canvas.getContext("2d");
-    context.setTransform(ratio, 0, 0, ratio, 0, 0);
-
-    return { context, width: rect.width, height: rect.height };
+  function stockholmDateParts(date = new Date()) {
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+    return Object.fromEntries(parts.filter(part => part.type !== "literal").map(part => [part.type, part.value]));
   }
 
-  function drawLine(canvas, data) {
-    const { context: ctx, width, height } = prepareCanvas(canvas);
-    ctx.clearRect(0, 0, width, height);
-
-    const pad = { left: 44, right: 12, top: 16, bottom: 34 };
-    const max = Math.max(1, ...data.map(row => row.usage));
-
-    ctx.strokeStyle = "#cbd5e1";
-    ctx.fillStyle = "#64748b";
-    ctx.font = "12px system-ui";
-    ctx.beginPath();
-    ctx.moveTo(pad.left, pad.top);
-    ctx.lineTo(pad.left, height - pad.bottom);
-    ctx.lineTo(width - pad.right, height - pad.bottom);
-    ctx.stroke();
-
-    if (data.length === 0) {
-      ctx.textAlign = "center";
-      ctx.fillText("Importera data för att visa diagrammet", width / 2, height / 2);
-      return;
-    }
-
-    const xAt = index => pad.left +
-      (data.length === 1
-        ? 0
-        : index * (width - pad.left - pad.right) / (data.length - 1));
-
-    const yAt = value => height - pad.bottom -
-      value / max * (height - pad.top - pad.bottom);
-
-    ctx.strokeStyle = "#2563eb";
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-
-    data.forEach((row, index) => {
-      if (index === 0) ctx.moveTo(xAt(index), yAt(row.usage));
-      else ctx.lineTo(xAt(index), yAt(row.usage));
-    });
-
-    ctx.stroke();
-
-    data.forEach((row, index) => {
-      const x = xAt(index);
-      const y = yAt(row.usage);
-
-      ctx.fillStyle = "#2563eb";
-      ctx.beginPath();
-      ctx.arc(x, y, 4, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = "#64748b";
-      ctx.textAlign = "center";
-      ctx.fillText(MONTHS[row.month - 1], x, height - 10);
-    });
-
-    ctx.fillStyle = "#64748b";
-    ctx.textAlign = "right";
-    ctx.fillText(format(max), pad.left - 6, pad.top + 5);
-    ctx.fillText("0", pad.left - 6, height - pad.bottom);
+  function stockholmDateString(date = new Date()) {
+    const parts = stockholmDateParts(date);
+    return `${parts.year}/${parts.month}-${parts.day}`;
   }
 
-  function drawPie(canvas, data) {
-    const { context: ctx, width, height } = prepareCanvas(canvas);
-    ctx.clearRect(0, 0, width, height);
-
-    const values = data.map(row => costOf(row));
-    const total = values.reduce((sum, value) => sum + value, 0);
-
-    if (total <= 0) {
-      ctx.fillStyle = "#64748b";
-      ctx.textAlign = "center";
-      ctx.fillText("Ingen kostnadsdata att visa", width / 2, height / 2);
-      return;
-    }
-
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = Math.min(width, height) * 0.36;
-    let start = -Math.PI / 2;
-
-    values.forEach((value, index) => {
-      if (value <= 0) return;
-
-      const end = start + (value / total) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.arc(centerX, centerY, radius, start, end);
-      ctx.closePath();
-      ctx.fillStyle = COLORS[index % COLORS.length];
-      ctx.fill();
-      start = end;
-    });
-
-    ctx.fillStyle = "#172033";
-    ctx.font = "bold 14px system-ui";
-    ctx.textAlign = "center";
-    ctx.fillText(`${format(total)} kr`, centerX, centerY + 5);
+  function stockholmTime(date) {
+    return new Intl.DateTimeFormat("sv-SE", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(date);
   }
 
-  $("jsonFile").addEventListener("change", async event => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      records = normalizeData(JSON.parse(await file.text()));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-      render();
-      $("status").textContent = `Importerade ${records.length} månadsrader från ${file.name}.`;
-    } catch (error) {
-      $("status").textContent = `Importfel: ${error.message}`;
+  function renderPrices() {
+    const now = Date.now();
+    const tbody = $("priceRows");
+    tbody.replaceChildren();
+    if (!prices.length) return;
+    const sorted = [...prices].sort((a, b) => a.start - b.start);
+    const current = sorted.find(price => price.start <= now && now < price.end);
+    const average = sorted.reduce((sum, price) => sum + price.value, 0) / sorted.length;
+    const min = sorted.reduce((best, price) => price.value < best.value ? price : best);
+    const max = sorted.reduce((best, price) => price.value > best.value ? price : best);
+    $("currentPrice").textContent = current ? formatPrice(current.value) : "—";
+    $("currentInterval").textContent = current ? `${stockholmTime(new Date(current.start))}–${stockholmTime(new Date(current.end))}` : "Inget aktuellt intervall";
+    $("averagePrice").textContent = formatPrice(average);
+    $("minPrice").textContent = formatPrice(min.value);
+    $("minInterval").textContent = `${stockholmTime(new Date(min.start))}–${stockholmTime(new Date(min.end))}`;
+    $("maxPrice").textContent = formatPrice(max.value);
+    $("maxInterval").textContent = `${stockholmTime(new Date(max.start))}–${stockholmTime(new Date(max.end))}`;
+    for (const price of sorted) {
+      const row = document.createElement("tr");
+      if (price.start <= now && now < price.end) row.className = "current";
+      const timeCell = document.createElement("td");
+      timeCell.textContent = `${stockholmTime(new Date(price.start))}–${stockholmTime(new Date(price.end))}`;
+      const sekCell = document.createElement("td");
+      sekCell.textContent = format(price.value);
+      if (price.value < 0) sekCell.className = "negative";
+      const oreCell = document.createElement("td");
+      oreCell.textContent = format(price.value * 100);
+      const statusCell = document.createElement("td");
+      statusCell.textContent = price.start <= now && now < price.end ? "Nu" : "";
+      statusCell.className = "current-label";
+      row.append(timeCell, sekCell, oreCell, statusCell);
+      tbody.append(row);
     }
+  }
 
-    event.target.value = "";
-  });
-
-  $("yearSelect").addEventListener("change", render);
-
-  $("exportBtn").addEventListener("click", () => {
-    const year = Number($("yearSelect").value);
-    const data = rowsFor(year);
-
-    if (data.length === 0) {
-      $("status").textContent = "Det finns inga rader att exportera.";
-      return;
-    }
-
-    const rows = [
-      ["År", "Månad", "Förbrukning_kWh", "Kostnad_kr"],
-      ...data.map(row => [
-        row.year,
-        MONTHS[row.month - 1],
-        row.usage,
-        Math.round(costOf(row) * 100) / 100
-      ])
-    ];
-
-    const csv = rows
-      .map(row => row.map(value =>
-        `"${String(value).replaceAll('"', '""')}"`
-      ).join(";"))
-      .join("\r\n");
-
-    const blob = new Blob(["\uFEFF" + csv], {
-      type: "text/csv;charset=utf-8"
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `elkoll-${year}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    $("status").textContent = `CSV-fil för ${year} exporterad.`;
-  });
-
-  async function fetchSE3Price() {
-    const button = $("priceBtn");
+  async function fetchSE3Prices() {
+    const button = $("refreshPrices");
     button.disabled = true;
-    $("spotNote").textContent = "Hämtar dagens pris…";
-
-    const now = new Date();
-    const date = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-
+    $("priceStatus").textContent = "Hämtar kvartspriser…";
+    $("priceDate").textContent = `Prisdatum: ${new Intl.DateTimeFormat("sv-SE", { timeZone: TIME_ZONE, dateStyle: "long" }).format(new Date())}`;
     try {
-      const url = `https://www.elprisetjustnu.se/api/v1/prices/${date}_SE3.json`;
+      const url = `https://www.elprisetjustnu.se/api/v1/prices/${stockholmDateString()}_${PRICE_AREA}.json`;
       const response = await fetch(url, { cache: "no-store" });
-
-      if (!response.ok) {
-        throw new Error(`Tjänsten svarade ${response.status}`);
-      }
-
-      const prices = await response.json();
-
-      if (!Array.isArray(prices) || prices.length === 0) {
-        throw new Error("Inga priser hittades för idag.");
-      }
-
-      const current = prices.find(price =>
-        new Date(price.time_start) <= now &&
-        new Date(price.time_end) > now
-      );
-
-      const average = prices.reduce(
-        (sum, price) => sum + Number(price.SEK_per_kWh), 0
-      ) / prices.length;
-
-      $("spotPrice").textContent = current
-        ? `${format(current.SEK_per_kWh)} kr`
-        : "—";
-
-      $("spotNote").textContent =
-        `Dagens snitt: ${format(average)} kr/kWh, spotpris`;
+      if (!response.ok) throw new Error(`Pristjänsten svarade med HTTP ${response.status}.`);
+      const data = await response.json();
+      if (!Array.isArray(data) || data.length === 0) throw new Error("Tjänsten returnerade inga priser för idag.");
+      const parsed = data.map(item => ({
+        value: Number(item.SEK_per_kWh),
+        start: Date.parse(item.time_start),
+        end: Date.parse(item.time_end)
+      })).filter(price => Number.isFinite(price.value) && Number.isFinite(price.start) && Number.isFinite(price.end) && price.end > price.start);
+      if (!parsed.length) throw new Error("Prisdata saknar giltiga kvartstider eller priser.");
+      prices = parsed;
+      renderPrices();
+      $("priceStatus").textContent = `${prices.length} prisintervall hämtade. Senast uppdaterad ${new Intl.DateTimeFormat("sv-SE", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date())}. Automatisk uppdatering var 15:e minut.`;
     } catch (error) {
-      $("spotPrice").textContent = "Ej tillgängligt";
-      $("spotNote").textContent =
-        `Kunde inte hämta priset: ${error.message}`;
+      $("priceStatus").textContent = `Kunde inte hämta SE3-priser: ${error.message} Kontrollera internetanslutningen och försök igen.`;
+      if (!prices.length) {
+        $("priceRows").innerHTML = "<tr><td colspan=\"4\" class=\"muted\">Prisdata kunde inte hämtas.</td></tr>";
+        $("currentPrice").textContent = "Ej tillgängligt";
+        $("averagePrice").textContent = "—";
+        $("minPrice").textContent = "—";
+        $("maxPrice").textContent = "—";
+      }
     } finally {
       button.disabled = false;
     }
   }
 
-  $("priceBtn").addEventListener("click", fetchSE3Price);
-  window.addEventListener("resize", render);
+  $("jsonFile").addEventListener("change", async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      records = normalizeData(JSON.parse(await file.text()));
+      localStorage.setItem(MONTHLY_STORAGE_KEY, JSON.stringify(records));
+      renderMonthly();
+      $("monthlyStatus").textContent = `Importerade ${records.length} månadsrader från ${file.name}.`;
+    } catch (error) {
+      $("monthlyStatus").textContent = `Importfel: ${error.message}`;
+    }
+    event.target.value = "";
+  });
 
-  render();
-  fetchSE3Price();
+  $("yearSelect").addEventListener("change", renderMonthly);
+  $("exportBtn").addEventListener("click", () => {
+    const year = Number($("yearSelect").value);
+    const data = rowsFor(year);
+    if (!data.length) { $("monthlyStatus").textContent = "Det finns inga rader att exportera."; return; }
+    const rows = [["År", "Månad", "Förbrukning_kWh", "Kostnad_kr"], ...data.map(row => [row.year, MONTHS[row.month - 1], row.usage, Math.round(costOf(row) * 100) / 100])];
+    const csv = rows.map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(";")).join("\r\n");
+    const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `elkoll-${year}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    $("monthlyStatus").textContent = `CSV-fil för ${year} exporterad.`;
+  });
+
+  $("refreshPrices").addEventListener("click", fetchSE3Prices);
+  renderMonthly();
+  fetchSE3Prices();
+  refreshTimer = window.setInterval(fetchSE3Prices, 15 * 60 * 1000);
+  window.setInterval(renderPrices, 60 * 1000);
+  window.addEventListener("focus", () => {
+    if (document.visibilityState === "visible") fetchSE3Prices();
+  });
+  window.addEventListener("beforeunload", () => window.clearInterval(refreshTimer), { once: true });
 })();
 </script>
 </body>
