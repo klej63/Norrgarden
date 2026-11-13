@@ -1,1 +1,5 @@
-
+[
+  { "year": 2025, "month": 1, "usage": 850, "cost": 1200 },
+  { "year": 2025, "month": 2, "usage": 790 },
+  { "year": 2025, "month": 3, "usage": 920 }
+]
