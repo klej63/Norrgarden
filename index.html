@@ -122,7 +122,7 @@
     <select id="yearSelect" aria-label="Välj år"></select>
 
     <button id="exportBtn" class="secondary" type="button">Exportera CSV</button>
-    <button id="priceBtn" class="secondary" type="button">Hämta dagens SE3-pris</button>
+    <button id="priceBtn" class="secondary" type="button">Hämta kvartspris</button>
 
     <div id="status" class="muted" role="status" aria-live="polite">
       Importera en JSON-fil för att visa dina data.
@@ -146,9 +146,9 @@
       <div id="savingsNote" class="muted">Importera data för två år för jämförelse.</div>
     </article>
     <article class="card">
-      <h2>Dagens SE3-spotpris</h2>
+      <h2>Nuvarande kvartspris</h2>
       <div id="spotPrice" class="metric blue">—</div>
-      <div id="spotNote" class="muted">kr/kWh, före eventuella påslag</div>
+      <div id="spotNote" class="muted">SE3, kvart i taget</div>
     </article>
   </section>
 
@@ -184,6 +184,7 @@
   <p class="muted">
     Importerad data sparas bara i den här webbläsaren.
     Kostnad utan ett importerat kostnadsvärde uppskattas med 2,27 kr/kWh.
+    Om du vill lägga till ett specifikt påslag för Upplands Energi, ändra konstanten <code>UPPLANDS_ENERGI_SURCHARGE</code> i scriptet.
   </p>
 </main>
 
@@ -193,6 +194,7 @@
 
   const STORAGE_KEY = "elkoll-monthly-data-v1";
   const DEFAULT_RATE = 2.27;
+  const UPPLANDS_ENERGI_SURCHARGE = 0.00; // sätt till t.ex. 0.13 för 13 öre/kWh om du vill inkludera påslag
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun",
                    "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
   const COLORS = ["#2563eb", "#059669", "#ea580c", "#7c3aed",
@@ -513,10 +515,10 @@
     $("status").textContent = `CSV-fil för ${year} exporterad.`;
   });
 
-  async function fetchSE3Price() {
+  async function fetchQuarterlyPrice() {
     const button = $("priceBtn");
     button.disabled = true;
-    $("spotNote").textContent = "Hämtar dagens pris…";
+    $("spotNote").textContent = "Hämtar aktuellt kvartspris…";
 
     const now = new Date();
     const date = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -540,30 +542,31 @@
         new Date(price.time_end) > now
       );
 
-      const average = prices.reduce(
-        (sum, price) => sum + Number(price.SEK_per_kWh), 0
-      ) / prices.length;
+      if (!current) {
+        throw new Error("Inget aktuellt kvartal hittades.");
+      }
 
-      $("spotPrice").textContent = current
-        ? `${format(current.SEK_per_kWh)} kr`
-        : "—";
+      const spot = Number(current.SEK_per_kWh || current.SEK_per_kWh === 0 ? current.SEK_per_kWh : 0);
+      const total = spot + UPPLANDS_ENERGI_SURCHARGE;
+      const rangeStart = new Date(current.time_start);
+      const rangeEnd = new Date(current.time_end);
 
+      $("spotPrice").textContent = `${format(total)} kr`;
       $("spotNote").textContent =
-        `Dagens snitt: ${format(average)} kr/kWh, spotpris`;
+        `${rangeStart.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}–${rangeEnd.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })} • SE3-pris ${format(spot)} kr/kWh + Upplands Energi påslag ${format(UPPLANDS_ENERGI_SURCHARGE)} kr/kWh`;
     } catch (error) {
       $("spotPrice").textContent = "Ej tillgängligt";
-      $("spotNote").textContent =
-        `Kunde inte hämta priset: ${error.message}`;
+      $("spotNote").textContent = `Kunde inte hämta kvartspriset: ${error.message}`;
     } finally {
       button.disabled = false;
     }
   }
 
-  $("priceBtn").addEventListener("click", fetchSE3Price);
+  $("priceBtn").addEventListener("click", fetchQuarterlyPrice);
   window.addEventListener("resize", render);
 
   loadInitialData();
-  fetchSE3Price();
+  fetchQuarterlyPrice();
 })();
 </script>
 </body>
