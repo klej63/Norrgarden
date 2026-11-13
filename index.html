@@ -122,7 +122,7 @@
     <select id="yearSelect" aria-label="Välj år"></select>
 
     <button id="exportBtn" class="secondary" type="button">Exportera CSV</button>
-    <button id="priceBtn" class="secondary" type="button">Hämta kvartspris</button>
+    <button id="priceBtn" class="secondary" type="button">Hämta dagens SE3-pris</button>
 
     <div id="status" class="muted" role="status" aria-live="polite">
       Importera en JSON-fil för att visa dina data.
@@ -146,9 +146,9 @@
       <div id="savingsNote" class="muted">Importera data för två år för jämförelse.</div>
     </article>
     <article class="card">
-      <h2>Nuvarande kvartspris</h2>
+      <h2>Dagens SE3-spotpris</h2>
       <div id="spotPrice" class="metric blue">—</div>
-      <div id="spotNote" class="muted">SE3, kvart i taget</div>
+      <div id="spotNote" class="muted">kr/kWh, före eventuella påslag</div>
     </article>
   </section>
 
@@ -184,7 +184,6 @@
   <p class="muted">
     Importerad data sparas bara i den här webbläsaren.
     Kostnad utan ett importerat kostnadsvärde uppskattas med 2,27 kr/kWh.
-    Om du vill lägga till ett specifikt påslag för Upplands Energi, ändra konstanten <code>UPPLANDS_ENERGI_SURCHARGE</code> i scriptet.
   </p>
 </main>
 
@@ -194,7 +193,6 @@
 
   const STORAGE_KEY = "elkoll-monthly-data-v1";
   const DEFAULT_RATE = 2.27;
-  const UPPLANDS_ENERGI_SURCHARGE = 0.00; // sätt till t.ex. 0.13 för 13 öre/kWh om du vill inkludera påslag
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun",
                    "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
   const COLORS = ["#2563eb", "#059669", "#ea580c", "#7c3aed",
@@ -204,6 +202,31 @@
   const $ = id => document.getElementById(id);
   const format = value =>
     Number(value).toLocaleString("sv-SE", { maximumFractionDigits: 2 });
+
+  function monthNumberFromValue(value) {
+    if (value == null) return null;
+
+    const asText = String(value).trim().toLowerCase();
+    const map = {
+      jan: 1, januari: 1,
+      feb: 2, februari: 2,
+      mar: 3, mars: 3,
+      apr: 4, april: 4,
+      maj: 5, may: 5,
+      jun: 6, juni: 6,
+      jul: 7, juli: 7,
+      aug: 8, augusti: 8,
+      sep: 9, sept: 9, september: 9,
+      okt: 10, oktober: 10,
+      nov: 11, november: 11,
+      dec: 12, december: 12
+    };
+
+    if (map[asText] !== undefined) return map[asText];
+
+    const month = Number(value);
+    return Number.isInteger(month) && month >= 1 && month <= 12 ? month : null;
+  }
 
   let records = loadSavedData();
 
@@ -246,32 +269,59 @@
       throw new Error("JSON-filen måste innehålla en lista med månadsrader.");
     }
 
-    const validRows = rows.map(row => {
-      if (!row || typeof row !== "object") return null;
+    const normalized = [];
 
-      const year = Number(row.year);
-      const month = Number(row.month);
-      const usage = Number(row.usage ?? row.kWh ?? row.kwh ?? row.consumption);
-      const rawCost = row.cost ?? row.costSEK;
-      const cost = rawCost === undefined || rawCost === null || rawCost === ""
-        ? null
-        : Number(rawCost);
+    for (const row of rows) {
+      if (!row || typeof row !== "object") continue;
 
-      if (!Number.isInteger(year) ||
-          !Number.isInteger(month) || month < 1 || month > 12 ||
-          !Number.isFinite(usage) || usage < 0 ||
-          (cost !== null && (!Number.isFinite(cost) || cost < 0))) {
-        return null;
+      const hasLegacyFields = Object.prototype.hasOwnProperty.call(row, "year") &&
+        Object.prototype.hasOwnProperty.call(row, "month");
+
+      if (hasLegacyFields) {
+        const year = Number(row.year);
+        const month = Number(row.month);
+        const usage = Number(row.usage ?? row.kWh ?? row.kwh ?? row.consumption);
+        const rawCost = row.cost ?? row.costSEK;
+        const cost = rawCost === undefined || rawCost === null || rawCost === ""
+          ? null
+          : Number(rawCost);
+
+        if (Number.isInteger(year) &&
+            Number.isInteger(month) && month >= 1 && month <= 12 &&
+            Number.isFinite(usage) && usage >= 0 &&
+            (cost === null || (Number.isFinite(cost) && cost >= 0))) {
+          normalized.push({ year, month, usage, cost });
+        }
+        continue;
       }
 
-      return { year, month, usage, cost };
-    }).filter(Boolean);
+      const periodKey = row.Period ?? row.Månad ?? row.Month ?? row.month ?? row.period;
+      if (periodKey !== undefined) {
+        const month = monthNumberFromValue(periodKey);
+        if (month == null) continue;
 
-    if (validRows.length === 0) {
+        for (const [key, value] of Object.entries(row)) {
+          if (["Period", "Månad", "Month", "period", "month"].includes(key)) continue;
+
+          const numericValue = Number(value);
+          const yearMatch = key.match(/(\d{4})/);
+          if (!Number.isFinite(numericValue) || numericValue < 0 || !yearMatch) continue;
+
+          normalized.push({
+            year: Number(yearMatch[1]),
+            month,
+            usage: numericValue,
+            cost: null
+          });
+        }
+      }
+    }
+
+    if (normalized.length === 0) {
       throw new Error("Inga giltiga rader hittades. Kontrollera år, månad och förbrukning.");
     }
 
-    return validRows;
+    return normalized;
   }
 
   function costOf(row) {
@@ -515,10 +565,10 @@
     $("status").textContent = `CSV-fil för ${year} exporterad.`;
   });
 
-  async function fetchQuarterlyPrice() {
+  async function fetchSE3Price() {
     const button = $("priceBtn");
     button.disabled = true;
-    $("spotNote").textContent = "Hämtar aktuellt kvartspris…";
+    $("spotNote").textContent = "Hämtar dagens pris…";
 
     const now = new Date();
     const date = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -542,31 +592,30 @@
         new Date(price.time_end) > now
       );
 
-      if (!current) {
-        throw new Error("Inget aktuellt kvartal hittades.");
-      }
+      const average = prices.reduce(
+        (sum, price) => sum + Number(price.SEK_per_kWh), 0
+      ) / prices.length;
 
-      const spot = Number(current.SEK_per_kWh || current.SEK_per_kWh === 0 ? current.SEK_per_kWh : 0);
-      const total = spot + UPPLANDS_ENERGI_SURCHARGE;
-      const rangeStart = new Date(current.time_start);
-      const rangeEnd = new Date(current.time_end);
+      $("spotPrice").textContent = current
+        ? `${format(current.SEK_per_kWh)} kr`
+        : "—";
 
-      $("spotPrice").textContent = `${format(total)} kr`;
       $("spotNote").textContent =
-        `${rangeStart.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}–${rangeEnd.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })} • SE3-pris ${format(spot)} kr/kWh + Upplands Energi påslag ${format(UPPLANDS_ENERGI_SURCHARGE)} kr/kWh`;
+        `Dagens snitt: ${format(average)} kr/kWh, spotpris`;
     } catch (error) {
       $("spotPrice").textContent = "Ej tillgängligt";
-      $("spotNote").textContent = `Kunde inte hämta kvartspriset: ${error.message}`;
+      $("spotNote").textContent =
+        `Kunde inte hämta priset: ${error.message}`;
     } finally {
       button.disabled = false;
     }
   }
 
-  $("priceBtn").addEventListener("click", fetchQuarterlyPrice);
+  $("priceBtn").addEventListener("click", fetchSE3Price);
   window.addEventListener("resize", render);
 
   loadInitialData();
-  fetchQuarterlyPrice();
+  fetchSE3Price();
 })();
 </script>
 </body>
